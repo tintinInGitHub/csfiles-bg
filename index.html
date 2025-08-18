@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS File: Crime Scene Files</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen active">
+        <div class="container">
+            <h1 class="title">CS File: Crime Scene Files</h1>
+            <div class="subtitle">A Detective-Themed Party Game</div>
+            
+            <div class="setup-section">
+                <h2>Game Setup</h2>
+                
+                <!-- Multiplayer Setup -->
+                <div id="multiplayerSetup" class="setup-option">
+                    <div class="input-group">
+                        <label for="playerName">Your Name:</label>
+                        <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+                    </div>
+                    <div class="input-group">
+                        <label for="multiplayerPlayerCount">Number of Players (4-12):</label>
+                        <input type="number" id="multiplayerPlayerCount" min="4" max="12" value="4">
+                    </div>
+                    
+                                    <div class="multiplayer-actions">
+                    <button id="createRoomBtn" class="btn-primary">Create Room</button>
+                    <div class="or-divider">OR</div>
+                    <div class="join-room-section">
+                        <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6">
+                        <button id="joinRoomBtn" class="btn-secondary">Join Room</button>
+                    </div>
+                </div>
+                
+                <!-- Connection Status -->
+                <div id="connectionStatus" class="connection-status hidden">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span id="statusText">Connecting...</span>
+                    </div>
+                </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h3>How to Play</h3>
+                <div class="instruction-grid">
+                    <div class="instruction-card">
+                        <h4>Roles</h4>
+                        <ul>
+                            <li><strong>Forensic Scientist:</strong> Reveals clues, publicly known</li>
+                            <li><strong>Murderer:</strong> Hides among players, selects crime evidence</li>
+                            <li><strong>Investigators:</strong> Deduce the Murderer and evidence</li>
+                            <li><strong>Accomplice:</strong> Helps Murderer (6+ players)</li>
+                            <li><strong>Witness:</strong> Knows Murderer (6+ players)</li>
+                        </ul>
+                    </div>
+                    <div class="instruction-card">
+                        <h4>Objective</h4>
+                        <ul>
+                            <li><strong>Investigators:</strong> Identify Murderer, Clue Card, and Mean Card</li>
+                            <li><strong>Murderer:</strong> Avoid detection or guess Witness if caught</li>
+                        </ul>
+                    </div>
+                    <div class="instruction-card">
+                        <h4>Gameplay</h4>
+                        <ul>
+                            <li>Night Phase: Murderer selects evidence</li>
+                            <li>Investigation Phase: 3 rounds of clues and discussion</li>
+                            <li>Players with badges can make guesses</li>
+                            <li>Pass device for private actions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Board -->
+    <div id="gameBoard" class="screen">
+        <div class="game-header">
+            <h1>CS File: Crime Scene Files</h1>
+            <div class="game-info">
+                <span id="currentPhase">Phase: Setup</span>
+                <span id="currentRound">Round: 1</span>
+                <div id="multiplayerInfo" class="multiplayer-info hidden">
+                    <span id="roomCodeDisplay">Room: <span id="roomCodeText"></span></span>
+                    <span id="playerCountDisplay">Players: <span id="playerCountText"></span></span>
+                </div>
+                <button id="passDeviceBtn" class="btn-secondary">Pass Device</button>
+            </div>
+        </div>
+
+        <div class="game-layout">
+            <!-- Players Section -->
+            <div class="players-section">
+                <h2>Players</h2>
+                <div id="playersGrid" class="players-grid"></div>
+            </div>
+
+            <!-- Game Area -->
+            <div class="game-area">
+                <!-- Scene Tile Section -->
+                <div class="scene-section">
+                    <h2>Scene Tile</h2>
+                    <div id="sceneTile" class="scene-tile">
+                        <div class="scene-text">No scene selected</div>
+                        <div id="bulletMarker" class="bullet-marker hidden"></div>
+                    </div>
+                </div>
+
+                <!-- Discussion Section -->
+                <div class="discussion-section">
+                    <h2>Discussion</h2>
+                    <div id="discussionLog" class="discussion-log"></div>
+                    <div class="discussion-input">
+                        <input type="text" id="commentInput" placeholder="Enter your comment or 'pass'...">
+                        <button id="submitCommentBtn" class="btn-primary">Submit</button>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button id="makeGuessBtn" class="btn-warning">Make Guess</button>
+                    <button id="nextPhaseBtn" class="btn-primary">Next Phase</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Player Identity Modal -->
+    <div id="playerIdentityModal" class="modal">
+        <div class="modal-content">
+            <h3>Player Identity</h3>
+            <p>Enter your player number to access private actions:</p>
+            <div class="input-group">
+                <label for="playerIdentityInput">Player Number:</label>
+                <input type="number" id="playerIdentityInput" min="1" max="12">
+            </div>
+            <div class="modal-buttons">
+                <button id="confirmIdentityBtn" class="btn-primary">Confirm</button>
+                <button id="cancelIdentityBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Night Phase Modal -->
+    <div id="nightPhaseModal" class="modal">
+        <div class="modal-content">
+            <h3 id="nightPhaseTitle">Night Phase</h3>
+            <div id="nightPhaseContent">
+                <p id="nightPhaseMessage">Everyone close your eyes...</p>
+                <div id="nightPhaseActions" class="hidden">
+                    <div class="card-selection">
+                        <h4>Select Crime Evidence</h4>
+                        <div class="selection-group">
+                            <label for="clueCardSelect">Clue Card:</label>
+                            <select id="clueCardSelect"></select>
+                        </div>
+                        <div class="selection-group">
+                            <label for="meanCardSelect">Mean Card:</label>
+                            <select id="meanCardSelect"></select>
+                        </div>
+                        <button id="confirmSelectionBtn" class="btn-primary">Confirm Selection</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="nextNightStepBtn" class="btn-primary">Next Step</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Murderer Card Selection Modal -->
+    <div id="murdererCardSelectionModal" class="modal">
+        <div class="modal-content">
+            <h3>Select Your Crime Evidence</h3>
+            <p>Choose one Clue Card and one Mean Card from your hand:</p>
+            
+            <div id="murdererCardSelectionContainer" class="card-selection-container">
+                <!-- Cards will be populated here -->
+            </div>
+
+            <!-- Hidden inputs to store selections -->
+            <input type="hidden" id="selectedClueCard" value="">
+            <input type="hidden" id="selectedMeanCard" value="">
+
+            <div class="modal-buttons">
+                <button id="confirmMurdererSelectionBtn" class="btn-primary">Confirm Selection</button>
+                <button id="cancelMurdererSelectionBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forensic Scientist Scene Selection Modal -->
+    <div id="forensicSceneSelectionModal" class="modal">
+        <div class="modal-content">
+            <h3>Select Scene Tile for Investigation</h3>
+            <p>Choose a scene tile to reveal during the investigation phase:</p>
+            
+            <div id="forensicSceneSelectionContainer" class="scene-selection-container">
+                <!-- Scene tiles will be populated here -->
+            </div>
+
+            <!-- Hidden input to store selection -->
+            <input type="hidden" id="selectedSceneTile" value="">
+
+            <div class="modal-buttons">
+                <button id="confirmSceneSelectionBtn" class="btn-primary">Confirm Selection</button>
+                <button id="cancelSceneSelectionBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guess Modal -->
+    <div id="guessModal" class="modal">
+        <div class="modal-content">
+            <h3>Make a Guess</h3>
+            <p>Select the Murderer and their evidence:</p>
+            <div class="guess-selection">
+                <div class="selection-group">
+                    <label for="guessPlayerSelect">Murderer (Player):</label>
+                    <select id="guessPlayerSelect"></select>
+                </div>
+                <div class="selection-group">
+                    <label for="guessClueSelect">Clue Card:</label>
+                    <select id="guessClueSelect"></select>
+                </div>
+                <div class="selection-group">
+                    <label for="guessMeanSelect">Mean Card:</label>
+                    <select id="guessMeanSelect"></select>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="submitGuessBtn" class="btn-warning">Submit Guess</button>
+                <button id="cancelGuessBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Witness Guess Modal -->
+    <div id="witnessGuessModal" class="modal">
+        <div class="modal-content">
+            <h3>Witness Guess</h3>
+            <p>You've been caught! Guess the Witness to win:</p>
+            <div class="selection-group">
+                <label for="witnessGuessSelect">Witness (Player):</label>
+                <select id="witnessGuessSelect">
+                    <option value="none">No Witness</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button id="submitWitnessGuessBtn" class="btn-warning">Submit Guess</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victoryModal" class="modal">
+        <div class="modal-content">
+            <h3 id="victoryTitle">Victory!</h3>
+            <div id="victoryContent">
+                <p id="victoryMessage"></p>
+                <div id="victoryDetails"></div>
+            </div>
+            <div class="modal-buttons">
+                <button id="newGameBtn" class="btn-primary">New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Multiplayer Waiting Room Modal -->
+    <div id="waitingRoomModal" class="modal">
+        <div class="modal-content">
+            <h3>Waiting Room</h3>
+            <div class="room-info">
+                <p><strong>Room Code:</strong> <span id="waitingRoomCode"></span></p>
+                <p><strong>Players:</strong> <span id="waitingPlayerCount">0</span>/<span id="waitingMaxPlayers">0</span></p>
+            </div>
+            
+            <div class="players-list">
+                <h4>Connected Players:</h4>
+                <div id="waitingPlayersList"></div>
+            </div>
+            
+            <div class="room-actions">
+                <button id="copyRoomCodeBtn" class="btn-secondary">Copy Room Code</button>
+                <button id="startMultiplayerGameBtn" class="btn-primary" disabled>Start Game</button>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="leaveRoomBtn" class="btn-warning">Leave Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <h3>Error</h3>
+            <p id="errorMessage"></p>
+            <div class="modal-buttons">
+                <button id="closeErrorBtn" class="btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game-data.js"></script>
+    <script src="game-utils.js"></script>
+    <script src="game-ui.js"></script>
+    <script src="game-core.js"></script>
+    <script src="game-server.js"></script>
+    <script src="game-controller.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

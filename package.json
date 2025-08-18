@@ -1,0 +1,26 @@
+{
+  "name": "cs-file-multiplayer-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for CS File: Crime Scene Files multiplayer game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "websocket",
+    "multiplayer",
+    "game",
+    "detective",
+    "board-game"
+  ],
+  "author": "CS File Game",
+  "license": "MIT"
+}
