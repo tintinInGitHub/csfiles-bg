@@ -142,6 +142,34 @@ class GameController {
     console.log('Current player ID:', this.currentPlayer);
     
     this.updateNightPhaseUI(nightInfo);
+    
+    // Start the night phase sequence
+    this.startNightPhaseSequence();
+  }
+
+  // Night phase sequence: everyone close eyes -> scientist awake -> murderer awake -> card selection
+  startNightPhaseSequence() {
+    // Step 1: Everyone close eyes
+    this.gameUI.showInfo('Everyone close your eyes...');
+    
+    setTimeout(() => {
+      // Step 2: Scientist open eyes
+      if (this.localRole === 'Forensic Scientist') {
+        this.gameUI.showInfo('Forensic Scientist, open your eyes. You will see what the murderer chooses.');
+      }
+      
+      setTimeout(() => {
+        // Step 3: Murderer open eyes and select cards
+        if (this.localRole === 'Murderer') {
+          this.gameUI.showInfo('Murderer, open your eyes. Select your crime evidence.');
+          this.showMurdererCardSelection();
+        } else if (this.localRole === 'Forensic Scientist') {
+          this.gameUI.showInfo('Murderer is selecting their cards. Watch carefully...');
+        } else {
+          this.gameUI.showInfo('Murderer is selecting their cards. Keep your eyes closed.');
+        }
+      }, 3000); // Wait 3 seconds before murderer phase
+    }, 2000); // Wait 2 seconds before scientist phase
   }
 
   // Update night phase UI
@@ -362,9 +390,13 @@ class GameController {
       this.gameUI.closeModal('murdererCardSelectionModal');
       this.gameUI.showSuccess('Evidence selected successfully!');
 
-      // Advance phases per new flow
-      this.gameCore.nextNightStep();
-      this.startCluePhaseUI();
+      // Notify scientist about the selection
+      if (this.localRole === 'Murderer') {
+        this.gameUI.showInfo('Close your eyes. The scientist will now see your selection.');
+      }
+
+      // Continue night phase sequence
+      this.continueNightPhaseAfterMurdererSelection();
 
       // Clear selections
       document.getElementById('selectedClueCard').value = '';
@@ -377,6 +409,27 @@ class GameController {
     } catch (error) {
       this.gameUI.showError(error.message);
     }
+  }
+
+  // Continue night phase after murderer selection
+  continueNightPhaseAfterMurdererSelection() {
+    setTimeout(() => {
+      // Notify scientist about murderer's selection
+      if (this.localRole === 'Forensic Scientist') {
+        const gameState = this.gameCore.getGameState();
+        this.gameUI.showInfo(`The murderer selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`);
+        this.gameUI.showInfo('Everyone can now open their eyes. You will now select scene tiles for investigation.');
+      } else if (this.localRole === 'Murderer') {
+        this.gameUI.showInfo('Everyone can now open their eyes.');
+      } else {
+        this.gameUI.showInfo('Everyone can now open their eyes. The scientist will select scene tiles.');
+      }
+
+      setTimeout(() => {
+        // Start clue phase
+        this.startCluePhaseUI();
+      }, 3000); // Wait 3 seconds before starting clue phase
+    }, 2000); // Wait 2 seconds before showing selection to scientist
   }
 
   // Show Forensic Scientist scene selection
@@ -616,6 +669,8 @@ class GameController {
         // Special message for murderer
         if (player.role === 'Murderer') {
           this.gameUI.showInfo('You are the Murderer. Stay hidden and choose wisely.');
+          // Store local role for murderer
+          this.localRole = 'Murderer';
         }
       }
       
