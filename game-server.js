@@ -26,6 +26,8 @@ class GameConnection {
             onPlayerLeft: null,
             onGameStateUpdate: null,
             onGameStarted: null,
+            onRoleDistribution: null,
+            onScientistReveal: null,
             onError: null,
             onRoomCreated: null,
             onRoomJoined: null
@@ -126,6 +128,16 @@ class GameConnection {
                     this.callbacks.onGameStarted(message.gameState);
                 }
                 break;
+            case 'roleDistribution':
+                if (this.callbacks.onRoleDistribution) {
+                    this.callbacks.onRoleDistribution(message.gameState);
+                }
+                break;
+            case 'scientistReveal':
+                if (this.callbacks.onScientistReveal) {
+                    this.callbacks.onScientistReveal(message.forensicInfo);
+                }
+                break;
                 
             case 'gameStateUpdate':
                 if (this.callbacks.onGameStateUpdate) {
@@ -168,6 +180,22 @@ class GameConnection {
         this.sendMessage({
             type: 'startGame',
             gameState: gameState
+        });
+    }
+
+    // Send role distribution
+    sendRoleDistribution(gameState) {
+        this.sendMessage({
+            type: 'roleDistribution',
+            gameState: gameState
+        });
+    }
+
+    // Send scientist reveal
+    sendScientistReveal(forensicInfo) {
+        this.sendMessage({
+            type: 'scientistReveal',
+            forensicInfo: forensicInfo
         });
     }
 

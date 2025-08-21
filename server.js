@@ -226,6 +226,12 @@ function handleMessage(ws, message, playerId) {
         case 'startGame':
             handleStartGame(ws, message, playerId);
             break;
+        case 'roleDistribution':
+            handleRoleDistribution(ws, message, playerId);
+            break;
+        case 'scientistReveal':
+            handleScientistReveal(ws, message, playerId);
+            break;
         case 'gameStateUpdate':
             handleGameStateUpdate(ws, message, playerId);
             break;
@@ -320,6 +326,52 @@ function handleStartGame(ws, message, playerId) {
     });
 
     console.log(`Game started in room ${playerInfo.roomCode}`);
+}
+
+// Handle role distribution
+function handleRoleDistribution(ws, message, playerId) {
+    const playerInfo = players.get(playerId);
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    if (!room || room.hostPlayerId !== playerId) {
+        ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Only the host can distribute roles'
+        }));
+        return;
+    }
+
+    // Broadcast role distribution to all players
+    broadcastToRoom(playerInfo.roomCode, {
+        type: 'roleDistribution',
+        gameState: message.gameState
+    });
+
+    console.log(`Role distribution in room ${playerInfo.roomCode}`);
+}
+
+// Handle scientist reveal
+function handleScientistReveal(ws, message, playerId) {
+    const playerInfo = players.get(playerId);
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    if (!room || room.hostPlayerId !== playerId) {
+        ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Only the host can reveal scientist'
+        }));
+        return;
+    }
+
+    // Broadcast scientist reveal to all players
+    broadcastToRoom(playerInfo.roomCode, {
+        type: 'scientistReveal',
+        forensicInfo: message.forensicInfo
+    });
+
+    console.log(`Scientist reveal in room ${playerInfo.roomCode}`);
 }
 
 // Handle game state updates

@@ -577,6 +577,11 @@ class GameController {
       this.gameUI.showInfo(forensicInfo.message);
       this.updateGameUI();
 
+      // If host, send scientist reveal to all players
+      if (this.isHost && this.connection) {
+        this.connection.sendScientistReveal(forensicInfo);
+      }
+
       // Show a modal to confirm the reveal
       this.showForensicRevealModal(forensicInfo);
       if (this.localRole === 'Murderer') {
@@ -627,6 +632,12 @@ class GameController {
       if (contBtn) {
         contBtn.onclick = () => {
           this.gameUI.closeModal('rolesDistributionModal');
+          
+          // If host, send role distribution to all players
+          if (this.isHost && this.connection) {
+            this.connection.sendRoleDistribution(this.gameCore.getGameState());
+          }
+          
           this.revealForensicScientistBeforeNight();
         };
       }
@@ -1161,6 +1172,31 @@ class GameController {
       }
     });
 
+    this.connection.on('onRoleDistribution', (gameState) => {
+      // Handle role distribution from host
+      this.gameCore.gameState = gameState;
+      this.updateGameUI();
+      
+      // Store local role for quick checks
+      const me = this.gameCore
+        .getGameState()
+        .players.find((p) => p.name === this.localPlayerName);
+      this.localRole = me?.role || '';
+      
+      console.log('Role distribution received. Local role:', this.localRole);
+      
+      // Show roles distribution modal for all players
+      this.showRolesDistributionModal();
+    });
+
+    this.connection.on('onScientistReveal', (forensicInfo) => {
+      // Handle scientist reveal from host
+      console.log('Scientist reveal received:', forensicInfo);
+      
+      // Show scientist reveal modal for all players
+      this.showForensicRevealModal(forensicInfo);
+    });
+
     this.connection.on('onGameStateUpdate', (gameState) => {
       // Handle game state updates from other players
       this.handleGameStateUpdate(gameState);
@@ -1196,6 +1232,9 @@ class GameController {
       document.getElementById('multiplayerPlayerCount').value
     );
     this.gameCore.startGame(playerCount);
+
+    // Set player names from waiting room
+    this.gameCore.setPlayerNames(this.waitingRoomPlayers.map(p => p.name));
 
     // Send game start to other players
     this.connection.startGame(this.gameCore.getGameState());
