@@ -570,81 +570,63 @@ class GameController {
     this.showForensicSceneSelection(info.stepLabel);
   }
 
-  // Reveal Forensic Scientist before night phase
+  // Reveal Forensic Scientist before night phase (legacy - now handled in simplified flow)
   revealForensicScientistBeforeNight() {
+    // This is now handled in startSimplifiedRoleReveal()
+    this.startSimplifiedRoleReveal();
+  }
+
+  // Simplified role reveal sequence
+  startSimplifiedRoleReveal() {
+    // First, announce the Forensic Scientist
     const forensicInfo = this.gameCore.revealForensicScientist();
     if (forensicInfo) {
       this.gameUI.showInfo(forensicInfo.message);
       this.updateGameUI();
-
+      
       // If host, send scientist reveal to all players
       if (this.isHost && this.connection) {
         this.connection.sendScientistReveal(forensicInfo);
       }
-
-      // Show a modal to confirm the reveal
-      this.showForensicRevealModal(forensicInfo);
-      if (this.localRole === 'Murderer') {
-        this.gameUI.showInfo(
-          'You are the Murderer. Stay hidden and choose wisely.'
-        );
-      }
     }
+    
+    // Then reveal each player's role individually
+    this.revealPlayerRolesSequentially();
   }
 
-  // Roles distribution modal sequence
-  showRolesDistributionModal() {
-    const listContainer = document.getElementById('rolesDistributionList');
-    if (listContainer) {
-      GameUtils.clearElement(listContainer);
+  // Reveal each player's role one by one
+  revealPlayerRolesSequentially() {
+    const players = this.gameCore.getGameState().players;
+    let currentIndex = 0;
+    
+    const showNextRole = () => {
+      if (currentIndex >= players.length) {
+        // All roles revealed, start night phase
+        this.startNightPhase();
+        return;
+      }
       
-      // Find current player's role
-      const currentPlayer = this.gameCore.getPlayerById(this.currentPlayer);
-      if (currentPlayer) {
-        const row = GameUtils.createElement(
-          'div',
-          { className: 'waiting-player' },
-          [
-            GameUtils.createElement('span', { textContent: currentPlayer.name }),
-            GameUtils.createElement('span', { textContent: currentPlayer.role }),
-          ]
-        );
-        listContainer.appendChild(row);
+      const player = players[currentIndex];
+      const isCurrentPlayer = player.name === this.localPlayerName;
+      
+      if (isCurrentPlayer) {
+        // Show role to current player
+        this.gameUI.showInfo(`You are the ${player.role}!`);
         
-        // Add message about other players
-        const infoRow = GameUtils.createElement(
-          'div',
-          { 
-            className: 'info-text',
-            style: 'text-align: center; margin-top: 20px; color: #cccccc; font-style: italic;'
-          },
-          [
-            GameUtils.createElement('p', { 
-              textContent: 'Other players will see their own roles on their screens.' 
-            })
-          ]
-        );
-        listContainer.appendChild(infoRow);
+        // Special message for murderer
+        if (player.role === 'Murderer') {
+          this.gameUI.showInfo('You are the Murderer. Stay hidden and choose wisely.');
+        }
       }
       
-      this.gameUI.showModal('rolesDistributionModal');
-      const contBtn = document.getElementById('continueToNightBtn');
-      if (contBtn) {
-        contBtn.onclick = () => {
-          this.gameUI.closeModal('rolesDistributionModal');
-          
-          // If host, send role distribution to all players
-          if (this.isHost && this.connection) {
-            this.connection.sendRoleDistribution(this.gameCore.getGameState());
-          }
-          
-          this.revealForensicScientistBeforeNight();
-        };
-      }
-    } else {
-      // Fallback: go straight to reveal
-      this.revealForensicScientistBeforeNight();
-    }
+      currentIndex++;
+      
+      // Wait 2 seconds before showing next role
+      setTimeout(showNextRole, 2000);
+    };
+    
+    // Start the sequence
+    showNextRole();
   }
 
   // Show Forensic Scientist reveal modal
@@ -1185,16 +1167,18 @@ class GameController {
       
       console.log('Role distribution received. Local role:', this.localRole);
       
-      // Show roles distribution modal for all players
-      this.showRolesDistributionModal();
+      // Start simplified role reveal sequence for all players
+      this.startSimplifiedRoleReveal();
     });
 
     this.connection.on('onScientistReveal', (forensicInfo) => {
       // Handle scientist reveal from host
       console.log('Scientist reveal received:', forensicInfo);
       
-      // Show scientist reveal modal for all players
-      this.showForensicRevealModal(forensicInfo);
+      // Show scientist info and start role reveal sequence
+      this.gameUI.showInfo(forensicInfo.message);
+      this.updateGameUI();
+      this.revealPlayerRolesSequentially();
     });
 
     this.connection.on('onGameStateUpdate', (gameState) => {
@@ -1243,8 +1227,8 @@ class GameController {
     this.gameUI.closeModal('waitingRoomModal');
     this.gameUI.showScreen('gameBoard');
     this.updateGameUI();
-    // Show roles distribution first
-    this.showRolesDistributionModal();
+    // Start simplified role reveal sequence
+    this.startSimplifiedRoleReveal();
   }
 
   // Handle game state updates
