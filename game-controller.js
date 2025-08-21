@@ -10,6 +10,8 @@ class GameController {
         this.waitingRoomPlayers = [];
         this.roomCode = null;
         this.maxPlayers = 0;
+        this.localPlayerName = '';
+        this.localRole = '';
         
         this.bindEvents();
     }
@@ -24,7 +26,7 @@ class GameController {
         document.getElementById('leaveRoomBtn').addEventListener('click', () => this.leaveRoom());
 
         // Game board events
-        document.getElementById('passDeviceBtn').addEventListener('click', () => this.passDevice());
+        // Removed pass device feature
         document.getElementById('makeGuessBtn').addEventListener('click', () => this.showGuessModal());
         document.getElementById('nextPhaseBtn').addEventListener('click', () => this.nextPhase());
         document.getElementById('submitCommentBtn').addEventListener('click', () => this.submitComment());
@@ -91,11 +93,16 @@ class GameController {
         const murdererPlayer = gameState.players.find(p => p.id === playerId);
         
         if (murdererPlayer) {
-            // The role is already set, but we need to make sure it's visible
+            // Update visuals
             this.updateGameUI();
-            
-            // Show a notification
-            this.gameUI.showWarning(`Player ${playerId} is the Murderer!`);
+            // Notify everyone with name
+            const name = murdererPlayer.name || `Player ${playerId}`;
+            this.gameUI.showWarning(`${name} is the Murderer!`);
+            // Also notify the murderer specifically
+            const me = this.gameCore.getPlayerById(this.currentPlayer);
+            if (me && me.id === murdererPlayer.id) {
+                this.gameUI.showInfo('You are the Murderer. Select your Lethal Weapon and Clue Card when prompted.');
+            }
         }
     }
 
@@ -524,12 +531,7 @@ class GameController {
         }
     }
 
-    // Pass device
-    passDevice() {
-        this.currentPlayer = this.currentPlayer % this.gameCore.gameState.playerCount + 1;
-        this.updateGameUI();
-        this.addDiscussionEntry(`Device passed to Player ${this.currentPlayer}`);
-    }
+    // Removed passDevice
 
     // Show guess modal
     showGuessModal() {
@@ -617,11 +619,13 @@ class GameController {
         const solution = this.gameCore.gameState.hiddenSolution;
         if (!solution) return '';
 
+        const murderer = this.gameCore.getPlayerById(solution.murdererId);
+        const murdererName = murderer?.name || `Player ${solution.murdererId}`;
         return `
             <h4>Game Summary:</h4>
-            <p><strong>Murderer:</strong> Player ${solution.murdererId}</p>
+            <p><strong>Murderer:</strong> ${murdererName}</p>
             <p><strong>Clue Card:</strong> ${solution.clueCard}</p>
-            <p><strong>Mean Card:</strong> ${solution.meanCard}</p>
+            <p><strong>Lethal Weapon:</strong> ${solution.meanCard}</p>
         `;
     }
 
@@ -769,6 +773,8 @@ class GameController {
     // Create a multiplayer room
     async createRoom() {
         const playerName = document.getElementById('playerName').value.trim();
+        this.localPlayerName = playerName;
+        this.localPlayerName = playerName;
         const playerCount = parseInt(document.getElementById('multiplayerPlayerCount').value);
         
         if (!playerName) {
@@ -916,6 +922,9 @@ class GameController {
             this.gameUI.showScreen('gameBoard');
             this.updateGameUI();
             this.revealForensicScientistBeforeNight();
+            // Store local role for quick checks
+            const me = this.gameCore.getGameState().players.find(p => p.name === this.localPlayerName);
+            this.localRole = me?.role || '';
         });
         
         this.connection.on('onGameStateUpdate', (gameState) => {
