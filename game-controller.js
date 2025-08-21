@@ -135,6 +135,12 @@ class GameController {
   startNightPhase() {
     const nightInfo = this.gameCore.startNightPhase();
     this.gameUI.showModal('nightPhaseModal');
+    
+    // Debug: log current role assignment
+    console.log('Night phase started. Local role:', this.localRole);
+    console.log('Local player name:', this.localPlayerName);
+    console.log('Current player ID:', this.currentPlayer);
+    
     this.updateNightPhaseUI(nightInfo);
   }
 
@@ -146,12 +152,20 @@ class GameController {
     actions.classList.add('hidden');
     const nextBtn = document.getElementById('nextNightStepBtn');
     const isScientistLocal = this.localRole === 'Forensic Scientist';
+    
+    // Make button more visible and clear
     nextBtn.disabled = !isScientistLocal;
+    nextBtn.style.display = 'block';
+    nextBtn.style.opacity = isScientistLocal ? '1' : '0.5';
+    
     if (isScientistLocal) {
+      nextBtn.textContent = 'Next Step (You are the Scientist)';
       this.gameUI.showInfo('You are the Forensic Scientist. You can click Next Step.');
     } else {
+      nextBtn.textContent = 'Next Step (Scientist Only)';
       this.gameUI.showInfo('Waiting for the Forensic Scientist to click Next Step...');
     }
+    
     if (nightInfo.step === 'murderer_select' && nightInfo.showActions) {
       if (this.localRole === 'Murderer') {
         this.showMurdererCardSelection();
@@ -1132,12 +1146,19 @@ class GameController {
       this.gameUI.closeModal('waitingRoomModal');
       this.gameUI.showScreen('gameBoard');
       this.updateGameUI();
-      this.revealForensicScientistBeforeNight();
+      
       // Store local role for quick checks
       const me = this.gameCore
         .getGameState()
         .players.find((p) => p.name === this.localPlayerName);
       this.localRole = me?.role || '';
+      
+      console.log('Game started. Local role assigned:', this.localRole);
+      
+      // Only host shows roles distribution
+      if (this.isHost) {
+        this.showRolesDistributionModal();
+      }
     });
 
     this.connection.on('onGameStateUpdate', (gameState) => {
@@ -1183,7 +1204,7 @@ class GameController {
     this.gameUI.closeModal('waitingRoomModal');
     this.gameUI.showScreen('gameBoard');
     this.updateGameUI();
-    // Show roles distribution, then reveal scientist, then night
+    // Show roles distribution first
     this.showRolesDistributionModal();
   }
 
