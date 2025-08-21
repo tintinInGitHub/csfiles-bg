@@ -121,6 +121,14 @@ class GameCore {
         });
     }
 
+    // Assign player display names in order
+    setPlayerNames(names) {
+        if (!Array.isArray(names)) return;
+        this.gameState.players.forEach((player, idx) => {
+            if (names[idx]) player.name = names[idx];
+        });
+    }
+
     // Start role distribution (public reveal per user flow)
     startRoleDistribution() {
         this.gameState.currentPhase = 'role_distribution';

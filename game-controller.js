@@ -82,7 +82,11 @@ class GameController {
         const isScientist = this.gameCore.getPlayerById(this.currentPlayer)?.role === 'Forensic Scientist';
         nextBtn.disabled = !isScientist;
         if (nightInfo.step === 'murderer_select' && nightInfo.showActions) {
-            this.showMurdererCardSelection();
+            if (this.localRole === 'Murderer') {
+                this.showMurdererCardSelection();
+            } else {
+                this.gameUI.showInfo('Waiting for the Murderer to select their cards...');
+            }
         }
     }
 
@@ -234,6 +238,10 @@ class GameController {
 
     // Confirm murderer selection
     confirmMurdererSelection() {
+        if (this.localRole !== 'Murderer') {
+            this.gameUI.showError('Only the Murderer can confirm this selection');
+            return;
+        }
         const selectedClue = document.getElementById('selectedClueCard').value;
         const selectedMean = document.getElementById('selectedMeanCard').value;
 
@@ -266,6 +274,10 @@ class GameController {
 
     // Show Forensic Scientist scene selection
     showForensicSceneSelection(stepLabel = null) {
+        if (this.localRole !== 'Forensic Scientist') {
+            this.gameUI.showInfo('Waiting for the Forensic Scientist to select a scene tile...');
+            return;
+        }
         const availableTiles = this.gameCore.getAvailableSceneTiles();
         if (stepLabel) {
             const titleEl = document.querySelector('#forensicSceneSelectionModal h3');
@@ -371,6 +383,10 @@ class GameController {
 
     // Confirm scene selection
     confirmSceneSelection() {
+        if (this.localRole !== 'Forensic Scientist') {
+            this.gameUI.showError('Only the Forensic Scientist can confirm this selection');
+            return;
+        }
         const selectedTile = document.getElementById('selectedSceneTile').value;
 
         if (!selectedTile) {
@@ -444,6 +460,9 @@ class GameController {
             
             // Show a modal to confirm the reveal
             this.showForensicRevealModal(forensicInfo);
+            if (this.localRole === 'Murderer') {
+                this.gameUI.showInfo('You are the Murderer. Stay hidden and choose wisely.');
+            }
         }
     }
 
@@ -976,6 +995,10 @@ class GameController {
     handleGameStateUpdate(gameState) {
         // Update local game state
         this.gameCore.gameState = gameState;
+        if (!this.localRole && this.localPlayerName) {
+            const me = this.gameCore.getGameState().players.find(p => p.name === this.localPlayerName);
+            this.localRole = me?.role || '';
+        }
         this.updateGameUI();
     }
 
