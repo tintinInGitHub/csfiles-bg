@@ -130,6 +130,11 @@ class GameController {
     const nextBtn = document.getElementById('nextNightStepBtn');
     const isScientistLocal = this.localRole === 'Forensic Scientist';
     nextBtn.disabled = !isScientistLocal;
+    if (isScientistLocal) {
+      this.gameUI.showInfo('You are the Forensic Scientist. You can click Next Step.');
+    } else {
+      this.gameUI.showInfo('Waiting for the Forensic Scientist to click Next Step...');
+    }
     if (nightInfo.step === 'murderer_select' && nightInfo.showActions) {
       if (this.localRole === 'Murderer') {
         this.showMurdererCardSelection();

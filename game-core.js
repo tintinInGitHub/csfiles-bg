@@ -158,8 +158,7 @@ class GameCore {
     return {
       phase: 'night',
       step: 'scientist_awake',
-      message:
-        'Everyone close your eyes. Forensic Scientist, open your eyes...',
+      message: 'Everyone close your eyes. Forensic Scientist, open your eyes...',
     };
   }
 
@@ -169,7 +168,7 @@ class GameCore {
     if (forensic) {
       return {
         playerId: forensic.id,
-        message: `Player ${forensic.id} is the Forensic Scientist!`,
+        message: `${forensic.name} is the Forensic Scientist!`,
       };
     }
     return null;
