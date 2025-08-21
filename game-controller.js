@@ -13,7 +13,24 @@ class GameController {
     this.localPlayerName = '';
     this.localRole = '';
 
+    this.loadVersion();
     this.bindEvents();
+  }
+
+  // Load and display version info
+  loadVersion() {
+    fetch('./version.json')
+      .then(response => response.json())
+      .then(data => {
+        const versionElement = document.getElementById('versionInfo');
+        if (versionElement) {
+          versionElement.textContent = `v${data.version} (${data.lastCommit})`;
+          versionElement.title = `Build: ${data.build}\nDeploy: ${new Date(data.lastDeploy).toLocaleString()}`;
+        }
+      })
+      .catch(error => {
+        console.log('Could not load version info:', error);
+      });
   }
 
   // Bind all event listeners
@@ -561,18 +578,36 @@ class GameController {
     const listContainer = document.getElementById('rolesDistributionList');
     if (listContainer) {
       GameUtils.clearElement(listContainer);
-      const players = this.gameCore.getGameState().players;
-      players.forEach((p) => {
+      
+      // Find current player's role
+      const currentPlayer = this.gameCore.getPlayerById(this.currentPlayer);
+      if (currentPlayer) {
         const row = GameUtils.createElement(
           'div',
           { className: 'waiting-player' },
           [
-            GameUtils.createElement('span', { textContent: p.name }),
-            GameUtils.createElement('span', { textContent: p.role }),
+            GameUtils.createElement('span', { textContent: currentPlayer.name }),
+            GameUtils.createElement('span', { textContent: currentPlayer.role }),
           ]
         );
         listContainer.appendChild(row);
-      });
+        
+        // Add message about other players
+        const infoRow = GameUtils.createElement(
+          'div',
+          { 
+            className: 'info-text',
+            style: 'text-align: center; margin-top: 20px; color: #cccccc; font-style: italic;'
+          },
+          [
+            GameUtils.createElement('p', { 
+              textContent: 'Other players will see their own roles on their screens.' 
+            })
+          ]
+        );
+        listContainer.appendChild(infoRow);
+      }
+      
       this.gameUI.showModal('rolesDistributionModal');
       const contBtn = document.getElementById('continueToNightBtn');
       if (contBtn) {
