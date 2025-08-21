@@ -169,24 +169,35 @@ class GameUI {
             className: 'player-cards'
         }, [
             this.createCardTypeSection('clue-cards', 'Clue Cards:', player.clueCards),
-            this.createCardTypeSection('mean-cards', 'Mean Cards:', player.meanCards)
+            this.createCardTypeSection('mean-cards', 'Lethal Weapons:', player.meanCards)
         ]);
     }
 
     // Create card type section
     createCardTypeSection(className, title, cards) {
-        return GameUtils.createElement('div', {
-            className: className
-        }, [
-            GameUtils.createElement('div', {
-                className: 'card-type',
-                textContent: title
-            }),
-            GameUtils.createElement('div', {
-                className: 'card-list',
-                textContent: cards.map(card => card.name).join(', ')
-            })
+        const cardGrid = GameUtils.createElement('div', { className: 'card-list' });
+        cards.forEach(card => {
+            const item = GameUtils.createElement('div', { className: 'card-item' }, [
+                GameUtils.createElement('div', { className: 'card-icon', textContent: this.getCardEmoji(card) }),
+                GameUtils.createElement('div', { className: 'card-name', textContent: card.name })
+            ]);
+            cardGrid.appendChild(item);
+        });
+
+        return GameUtils.createElement('div', { className: className }, [
+            GameUtils.createElement('div', { className: 'card-type', textContent: title }),
+            cardGrid
         ]);
+    }
+
+    getCardEmoji(card) {
+        const name = (card.name || '').toLowerCase();
+        if (card.type === 'mean' || name.includes('gun') || name.includes('knife') || name.includes('poison')) return '🔪';
+        if (name.includes('blood') || name.includes('fingerprint') || name.includes('hair') || name.includes('glass')) return '🧬';
+        if (name.includes('document') || name.includes('paper') || name.includes('note')) return '📄';
+        if (name.includes('key') || name.includes('lock')) return '🔑';
+        if (name.includes('phone')) return '📱';
+        return '🕵️';
     }
 
     // Update phase display
