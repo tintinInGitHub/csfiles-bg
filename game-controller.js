@@ -33,7 +33,6 @@ class GameController {
         document.getElementById('confirmIdentityBtn').addEventListener('click', () => this.confirmIdentity());
         document.getElementById('cancelIdentityBtn').addEventListener('click', () => this.gameUI.closeModal('playerIdentityModal'));
         document.getElementById('nextNightStepBtn').addEventListener('click', () => this.nextNightStep());
-        document.getElementById('confirmSelectionBtn').addEventListener('click', () => this.confirmSelection());
         document.getElementById('submitGuessBtn').addEventListener('click', () => this.submitGuess());
         document.getElementById('cancelGuessBtn').addEventListener('click', () => this.gameUI.closeModal('guessModal'));
         document.getElementById('submitWitnessGuessBtn').addEventListener('click', () => this.submitWitnessGuess());
@@ -75,25 +74,13 @@ class GameController {
     // Update night phase UI
     updateNightPhaseUI(nightInfo) {
         document.getElementById('nightPhaseMessage').textContent = nightInfo.message;
-        
-        if (nightInfo.revealMurderer) {
-            // Reveal the Murderer role to everyone
-            this.revealMurderer(nightInfo.playerId);
-        }
-        
-        if (nightInfo.showActions) {
-            if (nightInfo.step === 'murderer_select') {
-                // Show visual card selection for murderer
-                this.showMurdererCardSelection();
-            } else if (nightInfo.step === 'forensic_choice') {
-                // Show scene tile selection for Forensic Scientist
-                this.showForensicSceneSelection();
-            } else {
-                document.getElementById('nightPhaseActions').classList.remove('hidden');
-                this.populateCardSelections(nightInfo.playerId);
-            }
-        } else {
-            document.getElementById('nightPhaseActions').classList.add('hidden');
+        const actions = document.getElementById('nightPhaseActions');
+        actions.classList.add('hidden');
+        const nextBtn = document.getElementById('nextNightStepBtn');
+        const isScientist = this.gameCore.getPlayerById(this.currentPlayer)?.role === 'Forensic Scientist';
+        nextBtn.disabled = !isScientist;
+        if (nightInfo.step === 'murderer_select' && nightInfo.showActions) {
+            this.showMurdererCardSelection();
         }
     }
 
@@ -253,9 +240,9 @@ class GameController {
             this.gameUI.closeModal('murdererCardSelectionModal');
             this.gameUI.showSuccess('Evidence selected successfully!');
             
-            // Update night phase message
-            document.getElementById('nightPhaseMessage').textContent = result.message;
-            document.getElementById('nightPhaseActions').classList.add('hidden');
+            // Advance phases per new flow
+            this.gameCore.nextNightStep();
+            this.startCluePhaseUI();
             
             // Clear selections
             document.getElementById('selectedClueCard').value = '';
@@ -271,12 +258,15 @@ class GameController {
     }
 
     // Show Forensic Scientist scene selection
-    showForensicSceneSelection() {
+    showForensicSceneSelection(stepLabel = null) {
         const availableTiles = this.gameCore.getAvailableSceneTiles();
-        
-        // Create scene tile selection interface
+        if (stepLabel) {
+            const titleEl = document.querySelector('#forensicSceneSelectionModal h3');
+            if (titleEl) {
+                titleEl.textContent = `Select Scene Tile (${stepLabel})`;
+            }
+        }
         this.createSceneSelectionInterface(availableTiles);
-        
         this.gameUI.showModal('forensicSceneSelectionModal');
     }
 
@@ -382,12 +372,21 @@ class GameController {
         }
 
         try {
-            const result = this.gameCore.selectSceneTile(selectedTile);
-            this.gameUI.closeModal('forensicSceneSelectionModal');
-            this.gameUI.showSuccess('Scene tile selected successfully!');
-            
-            // Update game UI with the selected scene tile
-            this.updateGameUI();
+            if (this.gameCore.getGameState().currentPhase === 'clue') {
+                const next = this.gameCore.recordClueSelection(selectedTile);
+                this.gameUI.closeModal('forensicSceneSelectionModal');
+                if (next.phase === 'clue') {
+                    this.showForensicSceneSelection(next.stepLabel);
+                } else if (next.phase === 'discussion') {
+                    this.startDiscussionTimer(next.durationSec, next.endsAt);
+                    this.gameUI.showInfo('Discussion phase started');
+                }
+            } else {
+                const result = this.gameCore.selectSceneTile(selectedTile);
+                this.gameUI.closeModal('forensicSceneSelectionModal');
+                this.gameUI.showSuccess('Scene tile selected successfully!');
+                this.updateGameUI();
+            }
         } catch (error) {
             this.gameUI.showError(error.message);
         }
@@ -395,15 +394,17 @@ class GameController {
 
     // Next night step
     nextNightStep() {
-        const nightInfo = this.gameCore.nextNightStep();
-        
-        if (!nightInfo) {
-            // Night phase complete
-            this.gameUI.closeModal('nightPhaseModal');
-            this.startInvestigationPhase();
+        const isScientist = this.gameCore.getPlayerById(this.currentPlayer)?.role === 'Forensic Scientist';
+        if (!isScientist) {
+            this.gameUI.showError('Only the Forensic Scientist can advance the phase');
             return;
         }
-
+        const nightInfo = this.gameCore.nextNightStep();
+        if (!nightInfo) {
+            this.gameUI.closeModal('nightPhaseModal');
+            this.startCluePhaseUI();
+            return;
+        }
         this.updateNightPhaseUI(nightInfo);
     }
 
@@ -422,10 +423,9 @@ class GameController {
     }
 
     // Start investigation phase
-    startInvestigationPhase() {
-        const investigationInfo = this.gameCore.startInvestigationPhase();
-        this.updateGameUI();
-        this.gameUI.showInfo('Investigation phase begins!');
+    startCluePhaseUI() {
+        const info = this.gameCore.startCluePhase();
+        this.showForensicSceneSelection(info.stepLabel);
     }
 
     // Reveal Forensic Scientist before night phase
@@ -671,8 +671,29 @@ class GameController {
         this.gameUI.setButtonState('makeGuessBtn', canGuess);
         
         // Enable/disable next phase button
-        const canNextPhase = gameState.currentPhase === 'investigation' && !gameState.gameEnded;
+        const isScientist = currentPlayer?.role === 'Forensic Scientist';
+        const canNextPhase = isScientist && !gameState.gameEnded;
         this.gameUI.setButtonState('nextPhaseBtn', canNextPhase);
+    }
+
+    // Discussion timer management
+    startDiscussionTimer(durationSec, endsAt) {
+        if (this.discussionIntervalId) clearInterval(this.discussionIntervalId);
+        const updateTimer = () => {
+            const now = Date.now();
+            const remaining = Math.max(0, Math.floor((endsAt - now) / 1000));
+            const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
+            const seconds = (remaining % 60).toString().padStart(2, '0');
+            document.getElementById('currentPhase').textContent = `Phase: Discussion (${minutes}:${seconds})`;
+            if (remaining <= 0) {
+                clearInterval(this.discussionIntervalId);
+                this.discussionIntervalId = null;
+                const murderer = this.gameCore.getPlayerByRole('Murderer');
+                this.handleGameEnd({ winner: 'murderer', reason: `Time's up! Murderer was Player ${murderer?.id}`, gameEnded: true });
+            }
+        };
+        updateTimer();
+        this.discussionIntervalId = setInterval(updateTimer, 1000);
     }
 
     // Show error

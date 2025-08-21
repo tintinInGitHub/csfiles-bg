@@ -16,7 +16,13 @@ class GameCore {
             gameEnded: false,
             nightStep: null,
             selectedClueCard: null,
-            selectedMeanCard: null
+            selectedMeanCard: null,
+            // New flow state
+            clueSteps: [],
+            clueStepIndex: 0,
+            selectedClues: [],
+            discussionDurationSec: 0,
+            discussionEndsAt: null
         };
 
         this.decks = {
@@ -115,17 +121,26 @@ class GameCore {
         });
     }
 
+    // Start role distribution (public reveal per user flow)
+    startRoleDistribution() {
+        this.gameState.currentPhase = 'role_distribution';
+        return {
+            phase: 'role_distribution',
+            players: this.gameState.players.map(p => ({ id: p.id, name: p.name, role: p.role }))
+        };
+    }
+
     // Start Night Phase
     startNightPhase() {
         this.gameState.currentPhase = 'night';
-        this.gameState.nightStep = 'murderer_reveal';
+        this.gameState.nightStep = 'scientist_awake';
         this.gameState.selectedClueCard = null;
         this.gameState.selectedMeanCard = null;
         
         return {
             phase: 'night',
-            step: 'murderer_reveal',
-            message: 'Everyone close your eyes...'
+            step: 'scientist_awake',
+            message: 'Everyone close your eyes. Forensic Scientist, open your eyes...'
         };
     }
 
@@ -144,65 +159,22 @@ class GameCore {
     // Get current night step info
     getCurrentNightStep() {
         switch (this.gameState.nightStep) {
-            case 'murderer_reveal':
-                const murderer = this.getPlayerByRole('Murderer');
+            case 'scientist_awake':
+                const forensic = this.getPlayerByRole('Forensic Scientist');
                 return {
-                    step: 'murderer_reveal',
-                    playerId: murderer.id,
-                    message: `Player ${murderer.id} is the Murderer. Everyone close your eyes...`,
-                    showActions: false,
-                    revealMurderer: true
+                    step: 'scientist_awake',
+                    playerId: forensic?.id,
+                    message: `Everyone close your eyes. Forensic Scientist (Player ${forensic?.id}) open your eyes...`,
+                    showActions: false
                 };
-            
             case 'murderer_select':
                 const murdererSelect = this.getPlayerByRole('Murderer');
                 return {
                     step: 'murderer_select',
                     playerId: murdererSelect.id,
-                    message: `Player ${murdererSelect.id} (Murderer), open your eyes and select your crime evidence...`,
+                    message: `Murderer (Player ${murdererSelect.id}), open your eyes and select your crime evidence...`,
                     showActions: true
                 };
-            
-            case 'accomplice':
-                if (this.hasAccomplice()) {
-                    const accomplice = this.getPlayerByRole('Accomplice');
-                    return {
-                        step: 'accomplice',
-                        playerId: accomplice.id,
-                        message: `Player ${accomplice.id} (Accomplice), you know the evidence. Close your eyes...`,
-                        showActions: false
-                    };
-                } else {
-                    this.gameState.nightStep = 'witness';
-                    return this.getCurrentNightStep();
-                }
-            
-            case 'witness':
-                if (this.hasWitness()) {
-                    const witness = this.getPlayerByRole('Witness');
-                    const murderer = this.getPlayerByRole('Murderer');
-                    return {
-                        step: 'witness',
-                        playerId: witness.id,
-                        message: `Player ${witness.id} (Witness), the Murderer is Player ${murderer.id}. Close your eyes...`,
-                        showActions: false,
-                        murdererId: murderer.id
-                    };
-                } else {
-                    this.gameState.nightStep = 'forensic_choice';
-                    return this.getCurrentNightStep();
-                }
-            
-            case 'forensic_choice':
-                const forensicChoice = this.getPlayerByRole('Forensic Scientist');
-                return {
-                    step: 'forensic_choice',
-                    playerId: forensicChoice.id,
-                    message: `Player ${forensicChoice.id} (Forensic Scientist), you can see the evidence. Now make your choice...`,
-                    showActions: true,
-                    showSceneSelection: true
-                };
-            
             default:
                 return null;
         }
@@ -211,19 +183,11 @@ class GameCore {
     // Next night step
     nextNightStep() {
         switch (this.gameState.nightStep) {
-            case 'murderer_reveal':
+            case 'scientist_awake':
                 this.gameState.nightStep = 'murderer_select';
                 break;
             case 'murderer_select':
-                this.gameState.nightStep = 'accomplice';
-                break;
-            case 'accomplice':
-                this.gameState.nightStep = 'witness';
-                break;
-            case 'witness':
-                this.gameState.nightStep = 'forensic_choice';
-                break;
-            case 'forensic_choice':
+                // Night ends after murderer selects
                 this.endNightPhase();
                 return null;
         }
@@ -299,29 +263,57 @@ class GameCore {
         };
     }
 
-    // End night phase
+    // End night phase -> move into clue phase per user flow
     endNightPhase() {
-        this.gameState.currentPhase = 'investigation';
-        this.gameState.currentRound = 1;
-        this.gameState.nightStep = null;
-        
+        this.startCluePhase();
         return {
-            phase: 'investigation',
-            round: 1,
-            message: 'Night phase complete. Investigation begins...'
+            phase: 'clue',
+            stepLabel: this.gameState.clueSteps[this.gameState.clueStepIndex]
         };
     }
 
-    // Start investigation phase
-    startInvestigationPhase() {
-        this.gameState.currentPhase = 'investigation';
-        this.gameState.currentRound = 1;
-        this.updateSceneTile();
-        
+    // Start clue phase sequence: where, how, then 4 random
+    startCluePhase() {
+        this.gameState.currentPhase = 'clue';
+        this.gameState.nightStep = null;
+        this.gameState.clueSteps = ['where', 'how', 'random1', 'random2', 'random3', 'random4'];
+        this.gameState.clueStepIndex = 0;
+        this.gameState.selectedClues = [];
         return {
-            phase: 'investigation',
-            round: 1,
-            sceneTile: this.gameState.currentSceneTile
+            phase: 'clue',
+            stepLabel: this.gameState.clueSteps[0]
+        };
+    }
+
+    // Record one clue selection and advance
+    recordClueSelection(sceneTileText) {
+        const { success, sceneTile } = this.selectSceneTile(sceneTileText);
+        if (!success) {
+            throw new Error('Failed to record clue selection');
+        }
+        const label = this.gameState.clueSteps[this.gameState.clueStepIndex];
+        this.gameState.selectedClues.push({ label, tile: sceneTile });
+        this.gameState.clueStepIndex += 1;
+        const done = this.gameState.clueStepIndex >= this.gameState.clueSteps.length;
+        if (done) {
+            return this.startDiscussionPhase();
+        }
+        return {
+            phase: 'clue',
+            stepLabel: this.gameState.clueSteps[this.gameState.clueStepIndex]
+        };
+    }
+
+    // Start discussion phase with timer: players * 1 minute
+    startDiscussionPhase() {
+        this.gameState.currentPhase = 'discussion';
+        const minutes = this.gameState.playerCount; // 1 minute per player
+        this.gameState.discussionDurationSec = minutes * 60;
+        this.gameState.discussionEndsAt = Date.now() + this.gameState.discussionDurationSec * 1000;
+        return {
+            phase: 'discussion',
+            durationSec: this.gameState.discussionDurationSec,
+            endsAt: this.gameState.discussionEndsAt
         };
     }
 
