@@ -11,6 +11,7 @@ body {
     color: #ffffff;
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Neon Effects */
@@ -144,6 +145,7 @@ h4 {
     transition: all 0.3s ease;
     font-family: inherit;
     letter-spacing: 1px;
+    touch-action: manipulation;
 }
 
 .btn-primary {
@@ -905,4 +907,160 @@ h4 {
 
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(45deg, #ff4080, #40c4ff);
+}
+
+/* Disable hover-only effects on touch devices */
+@media (hover: none) {
+    .player-card:hover,
+    .selectable-card:hover,
+    .selectable-scene-tile:hover,
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    .btn-warning:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Responsive: Tablets and small laptops */
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
+    }
+
+    .game-header {
+        gap: 10px;
+        padding: 16px;
+    }
+
+    .game-info {
+        gap: 10px;
+    }
+
+    .game-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .players-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .player-card {
+        min-height: 160px;
+        padding: 16px;
+    }
+
+    .discussion-log {
+        height: 160px;
+    }
+
+    .modal-content {
+        padding: 20px;
+        max-height: 85vh;
+    }
+
+    .cards-container {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+
+    .scene-tiles-container {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
+/* Responsive: Phones */
+@media (max-width: 480px) {
+    .title {
+        letter-spacing: 1.5px;
+        margin-bottom: 6px;
+    }
+
+    .subtitle {
+        letter-spacing: 1px;
+        margin-bottom: 24px;
+    }
+
+    .setup-section,
+    .instructions {
+        padding: 16px;
+    }
+
+    .instruction-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .game-header {
+        padding: 12px;
+    }
+
+    .game-info {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .game-layout {
+        gap: 16px;
+    }
+
+    .players-section,
+    .scene-section,
+    .discussion-section {
+        padding: 14px;
+    }
+
+    .players-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .player-card {
+        min-height: 140px;
+        padding: 14px;
+    }
+
+    .player-name { font-size: 16px; }
+    .player-role { font-size: 14px; }
+
+    .card-list { font-size: 12px; }
+
+    .discussion-input {
+        flex-direction: column;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .join-room-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-warning {
+        width: 100%;
+        min-height: 44px; /* Apple HIG tap target */
+        font-size: 16px; /* prevent iOS zoom */
+    }
+
+    .modal-content {
+        padding: 16px;
+        max-width: 95vw;
+        max-height: 85vh;
+    }
+
+    .cards-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .scene-tiles-container {
+        grid-template-columns: 1fr;
+    }
+
+    #waitingPlayersList {
+        max-height: 180px;
+    }
 }
