@@ -149,6 +149,10 @@ class GameController {
 
   // Night phase sequence: everyone close eyes -> scientist awake -> murderer awake -> card selection
   startNightPhaseSequence() {
+    // Debug: log current role assignment
+    console.log('Night phase sequence started. Local role:', this.localRole);
+    console.log('Local player name:', this.localPlayerName);
+    
     // Step 1: Everyone close eyes
     this.gameUI.showInfo('Everyone close your eyes...');
     
@@ -652,6 +656,13 @@ class GameController {
     const players = this.gameCore.getGameState().players;
     let currentIndex = 0;
     
+    // First, assign local role for current player
+    const currentPlayer = players.find(p => p.name === this.localPlayerName);
+    if (currentPlayer) {
+      this.localRole = currentPlayer.role;
+      console.log('Local role assigned:', this.localRole);
+    }
+    
     const showNextRole = () => {
       if (currentIndex >= players.length) {
         // All roles revealed, start night phase
@@ -669,8 +680,11 @@ class GameController {
         // Special message for murderer
         if (player.role === 'Murderer') {
           this.gameUI.showInfo('You are the Murderer. Stay hidden and choose wisely.');
-          // Store local role for murderer
-          this.localRole = 'Murderer';
+        }
+        
+        // Special message for scientist
+        if (player.role === 'Forensic Scientist') {
+          this.gameUI.showInfo('You are the Forensic Scientist. You will guide the investigation.');
         }
       }
       
@@ -1202,6 +1216,8 @@ class GameController {
       this.localRole = me?.role || '';
       
       console.log('Game started. Local role assigned:', this.localRole);
+      console.log('Local player name:', this.localPlayerName);
+      console.log('Available players:', this.gameCore.getGameState().players.map(p => ({ name: p.name, role: p.role })));
       
       // Only host shows roles distribution
       if (this.isHost) {
