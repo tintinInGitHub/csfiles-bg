@@ -440,6 +440,33 @@ class GameController {
         }
     }
 
+    // Roles distribution modal sequence
+    showRolesDistributionModal() {
+        const listContainer = document.getElementById('rolesDistributionList');
+        if (listContainer) {
+            GameUtils.clearElement(listContainer);
+            const players = this.gameCore.getGameState().players;
+            players.forEach(p => {
+                const row = GameUtils.createElement('div', { className: 'waiting-player' }, [
+                    GameUtils.createElement('span', { textContent: p.name }),
+                    GameUtils.createElement('span', { textContent: p.role })
+                ]);
+                listContainer.appendChild(row);
+            });
+            this.gameUI.showModal('rolesDistributionModal');
+            const contBtn = document.getElementById('continueToNightBtn');
+            if (contBtn) {
+                contBtn.onclick = () => {
+                    this.gameUI.closeModal('rolesDistributionModal');
+                    this.revealForensicScientistBeforeNight();
+                };
+            }
+        } else {
+            // Fallback: go straight to reveal
+            this.revealForensicScientistBeforeNight();
+        }
+    }
+
     // Show Forensic Scientist reveal modal
     showForensicRevealModal(forensicInfo) {
         const modal = GameUtils.createElement('div', {
@@ -932,7 +959,8 @@ class GameController {
         this.gameUI.closeModal('waitingRoomModal');
         this.gameUI.showScreen('gameBoard');
         this.updateGameUI();
-        this.revealForensicScientistBeforeNight();
+        // Show roles distribution, then reveal scientist, then night
+        this.showRolesDistributionModal();
     }
 
     // Handle game state updates
