@@ -7,6 +7,9 @@ class GameController {
         this.currentPlayer = 1;
         this.connection = null;
         this.isHost = false;
+        this.waitingRoomPlayers = [];
+        this.roomCode = null;
+        this.maxPlayers = 0;
         
         this.bindEvents();
     }
@@ -781,9 +784,11 @@ class GameController {
 
     // Show waiting room
     showWaitingRoom(roomCode, maxPlayers) {
+        this.roomCode = roomCode;
+        this.maxPlayers = maxPlayers;
         document.getElementById('waitingRoomCode').textContent = roomCode;
         document.getElementById('waitingMaxPlayers').textContent = maxPlayers;
-        document.getElementById('waitingPlayerCount').textContent = '1';
+        document.getElementById('waitingPlayerCount').textContent = String(this.waitingRoomPlayers.length || 1);
         
         this.updateWaitingPlayersList();
         this.gameUI.showModal('waitingRoomModal');
@@ -793,32 +798,31 @@ class GameController {
     updateWaitingPlayersList() {
         if (!this.connection) return;
         
-        const status = this.connection.getConnectionStatus();
         const playersList = document.getElementById('waitingPlayersList');
         GameUtils.clearElement(playersList);
         
-        // For now, we'll show the current player
-        const playerElement = GameUtils.createElement('div', {
-            className: `waiting-player ${status.isHost ? 'host' : ''}`
-        }, [
-            GameUtils.createElement('span', {
-                textContent: status.playerName
-            }),
-            GameUtils.createElement('span', {
-                textContent: status.isHost ? 'Host' : 'Player'
-            })
-        ]);
+        const players = Array.isArray(this.waitingRoomPlayers) ? this.waitingRoomPlayers : [];
+        players.forEach(p => {
+            const playerElement = GameUtils.createElement('div', {
+                className: `waiting-player ${p.isHost ? 'host' : ''}`
+            }, [
+                GameUtils.createElement('span', {
+                    textContent: p.name
+                }),
+                GameUtils.createElement('span', {
+                    textContent: p.isHost ? 'Host' : 'Player'
+                })
+            ]);
+            playersList.appendChild(playerElement);
+        });
         
-        playersList.appendChild(playerElement);
-        
-        // Update player count
-        document.getElementById('waitingPlayerCount').textContent = '1';
+        // Update player count display
+        document.getElementById('waitingPlayerCount').textContent = String(players.length);
         
         // Enable start button for host when enough players
         const startBtn = document.getElementById('startMultiplayerGameBtn');
-        if (status.isHost && this.playerCount >= 4) {
-            startBtn.disabled = false;
-        }
+        const status = this.connection.getConnectionStatus();
+        startBtn.disabled = !(status.isHost && players.length >= 4);
     }
 
     // Setup multiplayer event listeners
@@ -831,22 +835,28 @@ class GameController {
         
         this.connection.on('onRoomCreated', (roomCode, room) => {
             this.isHost = true;
+            this.waitingRoomPlayers = Array.isArray(room.players) ? room.players : [];
             this.showWaitingRoom(roomCode, room.playerCount);
             this.hideConnectionStatus();
         });
         
         this.connection.on('onRoomJoined', (room) => {
             this.isHost = false;
+            this.waitingRoomPlayers = Array.isArray(room.players) ? room.players : [];
             this.showWaitingRoom(room.id, room.playerCount);
             this.hideConnectionStatus();
         });
         
         this.connection.on('onPlayerJoined', (playerId, playerName) => {
+            if (!this.waitingRoomPlayers.find(p => p.id === playerId)) {
+                this.waitingRoomPlayers.push({ id: playerId, name: playerName, isHost: false });
+            }
             this.updateWaitingPlayersList();
             this.gameUI.showInfo(`${playerName} joined the room`);
         });
         
         this.connection.on('onPlayerLeft', (playerId) => {
+            this.waitingRoomPlayers = this.waitingRoomPlayers.filter(p => p.id !== playerId);
             this.updateWaitingPlayersList();
             this.gameUI.showWarning('A player left the room');
         });
