@@ -403,6 +403,10 @@ class GameController {
     const selectedClue = document.getElementById('selectedClueCard').value;
     const selectedMean = document.getElementById('selectedMeanCard').value;
 
+    console.log('Murderer confirming selection:');
+    console.log('Selected clue:', selectedClue);
+    console.log('Selected mean:', selectedMean);
+
     if (!selectedClue || !selectedMean) {
       this.gameUI.showError('Please select both a Clue Card and a Mean Card');
       return;
@@ -410,6 +414,9 @@ class GameController {
 
     try {
       const result = this.gameCore.confirmSelection(selectedClue, selectedMean);
+      console.log('Game core confirmSelection result:', result);
+      console.log('Game state after confirmation:', this.gameCore.getGameState());
+      
       this.gameUI.closeModal('murdererCardSelectionModal');
       this.gameUI.showSuccess('Evidence selected successfully!');
 
