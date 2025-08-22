@@ -431,6 +431,7 @@ class GameController {
 
         // Also process the update locally for the host
         setTimeout(() => {
+          console.log('Host processing own game state update locally');
           this.handleGameStateUpdate(this.gameCore.getGameState());
         }, 100);
       }
@@ -442,8 +443,8 @@ class GameController {
         );
       }
 
-      // Continue night phase sequence (only for host)
-      if (this.isHost) {
+      // Continue night phase sequence (only for host, but not for scientist)
+      if (this.isHost && this.localRole !== 'Forensic Scientist') {
         this.continueNightPhaseAfterMurdererSelection();
       }
 
@@ -1607,6 +1608,11 @@ class GameController {
       gameState.selectedMeanCard !== 'null'
     ) {
       console.log('Scientist detected murderer selection!');
+      console.log('Is host scientist:', this.isHost);
+      console.log('Game state selections:', {
+        clueCard: gameState.selectedClueCard,
+        meanCard: gameState.selectedMeanCard
+      });
 
       // Find the murderer's name
       const murderer = gameState.players.find((p) => p.role === 'Murderer');
