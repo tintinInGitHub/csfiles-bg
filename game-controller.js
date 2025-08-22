@@ -443,18 +443,18 @@ class GameController {
         this.gameUI.showInfo(
           'Everyone can now open their eyes. You will now select scene tiles for investigation.'
         );
+        
+        // Start clue phase for scientist
+        setTimeout(() => {
+          this.startCluePhaseUI();
+        }, 2000);
       } else if (this.localRole === 'Murderer') {
-        this.gameUI.showInfo('Everyone can now open their eyes.');
+        this.gameUI.showInfo('Everyone can now open their eyes. Wait for the scientist to select tiles.');
       } else {
         this.gameUI.showInfo(
-          'Everyone can now open their eyes. The scientist will select scene tiles.'
+          'Everyone can now open their eyes. The scientist will select scene tiles, then discussion phase will begin.'
         );
       }
-
-      setTimeout(() => {
-        // Start clue phase
-        this.startCluePhaseUI();
-      }, 3000); // Wait 3 seconds before starting clue phase
     }, 2000); // Wait 2 seconds before showing selection to scientist
   }
 
@@ -599,6 +599,11 @@ class GameController {
         } else if (next.phase === 'discussion') {
           this.startDiscussionTimer(next.durationSec, next.endsAt);
           this.gameUI.showInfo('Discussion phase started');
+          
+          // Notify investigators that discussion phase has begun
+          if (this.localRole === 'Investigator' || this.localRole === 'Accomplice' || this.localRole === 'Witness') {
+            this.gameUI.showInfo('Discussion phase has begun! You can now discuss and make guesses.');
+          }
         }
       } else {
         const result = this.gameCore.selectSceneTile(selectedTile);
@@ -657,19 +662,28 @@ class GameController {
 
   // Assign local role for current player
   assignLocalRole() {
-    console.log('assignLocalRole called. Local player name:', this.localPlayerName);
+    console.log(
+      'assignLocalRole called. Local player name:',
+      this.localPlayerName
+    );
     const players = this.gameCore.getGameState().players;
-    console.log('Game state players:', players.map(p => ({ name: p.name, id: p.id, role: p.role })));
-    
+    console.log(
+      'Game state players:',
+      players.map((p) => ({ name: p.name, id: p.id, role: p.role }))
+    );
+
     // Try to find by name first
     let currentPlayer = players.find((p) => p.name === this.localPlayerName);
-    
+
     // If not found by name, try to find by ID or any other matching criteria
     if (!currentPlayer) {
       console.log('Player not found by name, trying alternative matching...');
       console.log('Looking for player with name:', this.localPlayerName);
-      console.log('Available players:', players.map(p => ({ name: p.name, id: p.id, role: p.role })));
-      
+      console.log(
+        'Available players:',
+        players.map((p) => ({ name: p.name, id: p.id, role: p.role }))
+      );
+
       // Try to find by connection player ID
       if (this.connection) {
         const connectionStatus = this.connection.getConnectionStatus();
@@ -677,15 +691,24 @@ class GameController {
         currentPlayer = players.find((p) => p.id === connectionStatus.playerId);
       }
     }
-    
+
     if (currentPlayer) {
       this.localRole = currentPlayer.role;
       console.log('Local role assigned in assignLocalRole:', this.localRole);
-      console.log('Matched player:', { name: currentPlayer.name, id: currentPlayer.id, role: currentPlayer.role });
+      console.log('Matched player:', {
+        name: currentPlayer.name,
+        id: currentPlayer.id,
+        role: currentPlayer.role,
+      });
     } else {
       console.error('Could not find current player in game state!');
       console.log('Local player name:', this.localPlayerName);
-      console.log('Connection status:', this.connection ? this.connection.getConnectionStatus() : 'No connection');
+      console.log(
+        'Connection status:',
+        this.connection
+          ? this.connection.getConnectionStatus()
+          : 'No connection'
+      );
     }
   }
 
@@ -710,39 +733,40 @@ class GameController {
     this.revealPlayerRolesSequentially();
   }
 
-  // Reveal each player's role one by one
+    // Reveal each player's role one by one
   revealPlayerRolesSequentially() {
     const players = this.gameCore.getGameState().players;
     let currentIndex = 0;
-
+    
     // First, assign local role for current player
     const currentPlayer = players.find((p) => p.name === this.localPlayerName);
     if (currentPlayer) {
       this.localRole = currentPlayer.role;
       console.log('Local role assigned:', this.localRole);
     }
-
+    
     const showNextRole = () => {
       if (currentIndex >= players.length) {
-        // All roles revealed, start night phase
+        // All roles revealed, show persistent role display and start night phase
+        this.showPersistentRoleDisplay();
         this.startNightPhase();
         return;
       }
-
+      
       const player = players[currentIndex];
       const isCurrentPlayer = player.name === this.localPlayerName;
-
+      
       if (isCurrentPlayer) {
         // Show role to current player
         this.gameUI.showInfo(`You are the ${player.role}!`);
-
+        
         // Special message for murderer
         if (player.role === 'Murderer') {
           this.gameUI.showInfo(
             'You are the Murderer. Stay hidden and choose wisely.'
           );
         }
-
+        
         // Special message for scientist
         if (player.role === 'Forensic Scientist') {
           this.gameUI.showInfo(
@@ -750,15 +774,70 @@ class GameController {
           );
         }
       }
-
+      
       currentIndex++;
-
+      
       // Wait 2 seconds before showing next role
       setTimeout(showNextRole, 2000);
     };
-
+    
     // Start the sequence
     showNextRole();
+  }
+
+  // Show persistent role display with hide/show functionality
+  showPersistentRoleDisplay() {
+    // Remove existing role display if any
+    const existingDisplay = document.getElementById('persistentRoleDisplay');
+    if (existingDisplay) {
+      existingDisplay.remove();
+    }
+
+    const roleDisplay = GameUtils.createElement('div', {
+      id: 'persistentRoleDisplay',
+      className: 'persistent-role-display',
+      style: `
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.9);
+        color: #00ff00;
+        padding: 15px;
+        border-radius: 10px;
+        border: 2px solid #00ff00;
+        z-index: 1000;
+        font-family: 'Courier New', monospace;
+        min-width: 200px;
+      `
+    });
+
+    const roleText = GameUtils.createElement('div', {
+      textContent: `Your Role: ${this.localRole}`,
+      style: 'font-weight: bold; margin-bottom: 10px;'
+    });
+
+    const toggleButton = GameUtils.createElement('button', {
+      textContent: '👁️ Hide Role',
+      className: 'btn-secondary',
+      style: 'font-size: 12px; padding: 5px 10px;'
+    });
+
+    let isHidden = false;
+    toggleButton.onclick = () => {
+      if (isHidden) {
+        roleText.style.display = 'block';
+        toggleButton.textContent = '👁️ Hide Role';
+        isHidden = false;
+      } else {
+        roleText.style.display = 'none';
+        toggleButton.textContent = '👁️ Show Role';
+        isHidden = false;
+      }
+    };
+
+    roleDisplay.appendChild(roleText);
+    roleDisplay.appendChild(toggleButton);
+    document.body.appendChild(roleDisplay);
   }
 
   // Show Forensic Scientist reveal modal
@@ -1108,7 +1187,10 @@ class GameController {
   async createRoom() {
     const playerName = document.getElementById('playerName').value.trim();
     this.localPlayerName = playerName;
-    console.log('Setting local player name in createRoom:', this.localPlayerName);
+    console.log(
+      'Setting local player name in createRoom:',
+      this.localPlayerName
+    );
     const playerCount = parseInt(
       document.getElementById('multiplayerPlayerCount').value
     );
