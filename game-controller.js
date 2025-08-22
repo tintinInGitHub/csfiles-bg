@@ -655,13 +655,34 @@ class GameController {
     this.startSimplifiedRoleReveal();
   }
 
-    // Assign local role for current player
+  // Assign local role for current player
   assignLocalRole() {
     const players = this.gameCore.getGameState().players;
-    const currentPlayer = players.find((p) => p.name === this.localPlayerName);
+    
+    // Try to find by name first
+    let currentPlayer = players.find((p) => p.name === this.localPlayerName);
+    
+    // If not found by name, try to find by ID or any other matching criteria
+    if (!currentPlayer) {
+      console.log('Player not found by name, trying alternative matching...');
+      console.log('Looking for player with name:', this.localPlayerName);
+      console.log('Available players:', players.map(p => ({ name: p.name, id: p.id, role: p.role })));
+      
+      // Try to find by connection player ID
+      if (this.connection) {
+        const connectionStatus = this.connection.getConnectionStatus();
+        currentPlayer = players.find((p) => p.id === connectionStatus.playerId);
+      }
+    }
+    
     if (currentPlayer) {
       this.localRole = currentPlayer.role;
       console.log('Local role assigned in assignLocalRole:', this.localRole);
+      console.log('Matched player:', { name: currentPlayer.name, id: currentPlayer.id, role: currentPlayer.role });
+    } else {
+      console.error('Could not find current player in game state!');
+      console.log('Local player name:', this.localPlayerName);
+      console.log('Connection status:', this.connection ? this.connection.getConnectionStatus() : 'No connection');
     }
   }
 
@@ -669,19 +690,19 @@ class GameController {
   startSimplifiedRoleReveal() {
     // First, assign local role
     this.assignLocalRole();
-    
+
     // First, announce the Forensic Scientist
     const forensicInfo = this.gameCore.revealForensicScientist();
     if (forensicInfo) {
       this.gameUI.showInfo(forensicInfo.message);
       this.updateGameUI();
- 
+
       // If host, send scientist reveal to all players
       if (this.isHost && this.connection) {
         this.connection.sendScientistReveal(forensicInfo);
       }
     }
- 
+
     // Then reveal each player's role individually
     this.revealPlayerRolesSequentially();
   }
@@ -1244,19 +1265,16 @@ class GameController {
       this.gameUI.showWarning('A player left the room');
     });
 
-        this.connection.on('onGameStarted', (gameState) => {
+    this.connection.on('onGameStarted', (gameState) => {
       // Handle game start from host
       this.gameCore.gameState = gameState;
       this.gameUI.closeModal('waitingRoomModal');
       this.gameUI.showScreen('gameBoard');
       this.updateGameUI();
-      
-      // Store local role for quick checks
-      const me = this.gameCore
-        .getGameState()
-        .players.find((p) => p.name === this.localPlayerName);
-      this.localRole = me?.role || '';
-      
+
+      // Assign local role for current player
+      this.assignLocalRole();
+
       console.log('Game started. Local role assigned:', this.localRole);
       console.log('Local player name:', this.localPlayerName);
       console.log(
@@ -1265,37 +1283,34 @@ class GameController {
           .getGameState()
           .players.map((p) => ({ name: p.name, role: p.role }))
       );
-      
+
       // Only host shows roles distribution
       if (this.isHost) {
         this.showRolesDistributionModal();
-      } else {
-        // Non-host players should also get their roles assigned immediately
-        this.assignLocalRole();
       }
     });
 
-        this.connection.on('onRoleDistribution', (gameState) => {
+    this.connection.on('onRoleDistribution', (gameState) => {
       // Handle role distribution from host
       this.gameCore.gameState = gameState;
       this.updateGameUI();
-      
+
       // Assign local role for current player
       this.assignLocalRole();
-      
+
       console.log('Role distribution received. Local role:', this.localRole);
-      
+
       // Start simplified role reveal sequence for all players
       this.startSimplifiedRoleReveal();
     });
 
-        this.connection.on('onScientistReveal', (forensicInfo) => {
+    this.connection.on('onScientistReveal', (forensicInfo) => {
       // Handle scientist reveal from host
       console.log('Scientist reveal received:', forensicInfo);
- 
+
       // Assign local role for current player
       this.assignLocalRole();
- 
+
       // Show scientist info and start role reveal sequence
       this.gameUI.showInfo(forensicInfo.message);
       this.updateGameUI();
