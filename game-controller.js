@@ -449,11 +449,11 @@ class GameController {
       // Notify scientist about murderer's selection
       if (this.localRole === 'Forensic Scientist') {
         const gameState = this.gameCore.getGameState();
-        
+
         // Find the murderer's name
-        const murderer = gameState.players.find(p => p.role === 'Murderer');
+        const murderer = gameState.players.find((p) => p.role === 'Murderer');
         const murdererName = murderer ? murderer.name : 'Unknown';
-        
+
         this.gameUI.showInfo(
           `The murderer (${murdererName}) selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
         );
@@ -863,6 +863,86 @@ class GameController {
     roleDisplay.appendChild(roleText);
     roleDisplay.appendChild(toggleButton);
     document.body.appendChild(roleDisplay);
+  }
+
+  // Show persistent murderer selection display for scientist
+  showPersistentMurdererSelection() {
+    // Remove existing murderer selection display if any
+    const existingDisplay = document.getElementById('persistentMurdererSelectionDisplay');
+    if (existingDisplay) {
+      existingDisplay.remove();
+    }
+
+    const gameState = this.gameCore.getGameState();
+    if (!gameState.selectedClueCard || !gameState.selectedMeanCard) {
+      return; // Don't show if no selection made yet
+    }
+
+    // Find the murderer's name
+    const murderer = gameState.players.find((p) => p.role === 'Murderer');
+    const murdererName = murderer ? murderer.name : 'Unknown';
+
+    const selectionDisplay = GameUtils.createElement('div', {
+      id: 'persistentMurdererSelectionDisplay',
+      className: 'persistent-murderer-selection-display',
+      style: `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 0, 0, 0.9);
+        color: #ffffff;
+        padding: 15px;
+        border-radius: 10px;
+        border: 2px solid #ff0000;
+        z-index: 1000;
+        font-family: 'Courier New', monospace;
+        min-width: 250px;
+      `,
+    });
+
+    const selectionText = GameUtils.createElement('div', {
+      textContent: `🔍 MURDERER: ${murdererName}`,
+      style: 'font-weight: bold; margin-bottom: 5px; color: #ffcccc;',
+    });
+
+    const clueText = GameUtils.createElement('div', {
+      textContent: `Clue: ${gameState.selectedClueCard}`,
+      style: 'margin-bottom: 5px;',
+    });
+
+    const weaponText = GameUtils.createElement('div', {
+      textContent: `Weapon: ${gameState.selectedMeanCard}`,
+      style: 'margin-bottom: 10px;',
+    });
+
+    const toggleButton = GameUtils.createElement('button', {
+      textContent: '👁️ Hide Selection',
+      className: 'btn-secondary',
+      style: 'font-size: 12px; padding: 5px 10px; background: #ff0000; color: white;',
+    });
+
+    let isHidden = false;
+    toggleButton.onclick = () => {
+      if (isHidden) {
+        selectionText.style.display = 'block';
+        clueText.style.display = 'block';
+        weaponText.style.display = 'block';
+        toggleButton.textContent = '👁️ Hide Selection';
+        isHidden = false;
+      } else {
+        selectionText.style.display = 'none';
+        clueText.style.display = 'none';
+        weaponText.style.display = 'none';
+        toggleButton.textContent = '👁️ Show Selection';
+        isHidden = true;
+      }
+    };
+
+    selectionDisplay.appendChild(selectionText);
+    selectionDisplay.appendChild(clueText);
+    selectionDisplay.appendChild(weaponText);
+    selectionDisplay.appendChild(toggleButton);
+    document.body.appendChild(selectionDisplay);
   }
 
   // Show Forensic Scientist reveal modal
@@ -1479,13 +1559,13 @@ class GameController {
     this.startSimplifiedRoleReveal();
   }
 
-    // Handle game state updates
+  // Handle game state updates
   handleGameStateUpdate(gameState) {
     console.log('Game state update received:', gameState);
     console.log('Current local role:', this.localRole);
     console.log('Selected clue card:', gameState.selectedClueCard);
     console.log('Selected mean card:', gameState.selectedMeanCard);
-    
+
     // Update local game state
     this.gameCore.gameState = gameState;
     if (!this.localRole && this.localPlayerName) {
@@ -1495,30 +1575,37 @@ class GameController {
       this.localRole = me?.role || '';
     }
     this.updateGameUI();
- 
-    // Check if murderer has made their selection and notify scientist
+
+        // Check if murderer has made their selection and notify scientist
     if (
       this.localRole === 'Forensic Scientist' &&
       gameState.selectedClueCard &&
       gameState.selectedMeanCard
     ) {
       console.log('Scientist detected murderer selection!');
-      
+ 
       // Find the murderer's name
-      const murderer = gameState.players.find(p => p.role === 'Murderer');
+      const murderer = gameState.players.find((p) => p.role === 'Murderer');
       const murdererName = murderer ? murderer.name : 'Unknown';
-      
-      this.gameUI.showInfo(
-        `The murderer (${murdererName}) selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
-      );
-      this.gameUI.showInfo(
-        'Everyone can now open their eyes. You will now select scene tiles for investigation.'
+ 
+      // Show prominent notification to scientist
+      this.gameUI.showWarning(
+        `🔍 MURDERER SELECTION: ${murdererName} chose ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
       );
  
-      // Start clue phase for scientist
+      // Show persistent murderer selection display
+      this.showPersistentMurdererSelection();
+ 
       setTimeout(() => {
-        this.startCluePhaseUI();
-      }, 2000);
+        this.gameUI.showInfo(
+          'Everyone can now open their eyes. You will now select scene tiles for investigation.'
+        );
+ 
+        // Start clue phase for scientist
+        setTimeout(() => {
+          this.startCluePhaseUI();
+        }, 2000);
+      }, 3000); // Wait 3 seconds before showing next message
     }
   }
 
