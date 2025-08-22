@@ -415,8 +415,11 @@ class GameController {
     try {
       const result = this.gameCore.confirmSelection(selectedClue, selectedMean);
       console.log('Game core confirmSelection result:', result);
-      console.log('Game state after confirmation:', this.gameCore.getGameState());
-      
+      console.log(
+        'Game state after confirmation:',
+        this.gameCore.getGameState()
+      );
+
       this.gameUI.closeModal('murdererCardSelectionModal');
       this.gameUI.showSuccess('Evidence selected successfully!');
 
@@ -425,7 +428,7 @@ class GameController {
         console.log('Broadcasting murderer selection to all players');
         console.log('Game state being sent:', this.gameCore.getGameState());
         this.connection.sendGameState(this.gameCore.getGameState());
-        
+
         // Also process the update locally for the host
         setTimeout(() => {
           this.handleGameStateUpdate(this.gameCore.getGameState());
@@ -439,8 +442,10 @@ class GameController {
         );
       }
 
-      // Continue night phase sequence
-      this.continueNightPhaseAfterMurdererSelection();
+      // Continue night phase sequence (only for host)
+      if (this.isHost) {
+        this.continueNightPhaseAfterMurdererSelection();
+      }
 
       // Clear selections
       document.getElementById('selectedClueCard').value = '';
@@ -1593,10 +1598,13 @@ class GameController {
     this.updateGameUI();
 
     // Check if murderer has made their selection and notify scientist
+    // Only check if we have actual selections (not null/empty)
     if (
       this.localRole === 'Forensic Scientist' &&
       gameState.selectedClueCard &&
-      gameState.selectedMeanCard
+      gameState.selectedMeanCard &&
+      gameState.selectedClueCard !== 'null' &&
+      gameState.selectedMeanCard !== 'null'
     ) {
       console.log('Scientist detected murderer selection!');
 
