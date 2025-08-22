@@ -405,6 +405,11 @@ class GameController {
       this.gameUI.closeModal('murdererCardSelectionModal');
       this.gameUI.showSuccess('Evidence selected successfully!');
 
+      // Broadcast murderer selection to all players
+      if (this.isHost && this.connection) {
+        this.connection.sendGameState(this.gameCore.getGameState());
+      }
+
       // Notify scientist about the selection
       if (this.localRole === 'Murderer') {
         this.gameUI.showInfo(
@@ -1470,6 +1475,21 @@ class GameController {
       this.localRole = me?.role || '';
     }
     this.updateGameUI();
+    
+    // Check if murderer has made their selection and notify scientist
+    if (this.localRole === 'Forensic Scientist' && gameState.selectedClueCard && gameState.selectedMeanCard) {
+      this.gameUI.showInfo(
+        `The murderer selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
+      );
+      this.gameUI.showInfo(
+        'Everyone can now open their eyes. You will now select scene tiles for investigation.'
+      );
+      
+      // Start clue phase for scientist
+      setTimeout(() => {
+        this.startCluePhaseUI();
+      }, 2000);
+    }
   }
 
   // Leave room
