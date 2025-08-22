@@ -449,8 +449,13 @@ class GameController {
       // Notify scientist about murderer's selection
       if (this.localRole === 'Forensic Scientist') {
         const gameState = this.gameCore.getGameState();
+        
+        // Find the murderer's name
+        const murderer = gameState.players.find(p => p.role === 'Murderer');
+        const murdererName = murderer ? murderer.name : 'Unknown';
+        
         this.gameUI.showInfo(
-          `The murderer selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
+          `The murderer (${murdererName}) selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
         );
         this.gameUI.showInfo(
           'Everyone can now open their eyes. You will now select scene tiles for investigation.'
@@ -1498,8 +1503,13 @@ class GameController {
       gameState.selectedMeanCard
     ) {
       console.log('Scientist detected murderer selection!');
+      
+      // Find the murderer's name
+      const murderer = gameState.players.find(p => p.role === 'Murderer');
+      const murdererName = murderer ? murderer.name : 'Unknown';
+      
       this.gameUI.showInfo(
-        `The murderer selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
+        `The murderer (${murdererName}) selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
       );
       this.gameUI.showInfo(
         'Everyone can now open their eyes. You will now select scene tiles for investigation.'
