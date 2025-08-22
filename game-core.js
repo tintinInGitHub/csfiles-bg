@@ -64,6 +64,7 @@ class GameCore {
 
     this.gameState.playerCount = playerCount;
     this.setupGame();
+    this.gameState.currentPhase = 'role_distribution'; // Set initial phase
     return this.gameState;
   }
 

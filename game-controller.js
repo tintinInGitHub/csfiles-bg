@@ -152,6 +152,14 @@ class GameController {
     console.log('Night phase sequence started. Local role:', this.localRole);
     console.log('Local player name:', this.localPlayerName);
 
+    // Update phase to night
+    if (this.isHost) {
+      this.gameCore.gameState.currentPhase = 'night';
+      if (this.connection) {
+        this.connection.sendGameState(this.gameCore.getGameState());
+      }
+    }
+
     // Step 1: Everyone close eyes
     this.gameUI.showInfo('Everyone close your eyes...');
 
@@ -407,6 +415,8 @@ class GameController {
 
       // Broadcast murderer selection to all players
       if (this.isHost && this.connection) {
+        console.log('Broadcasting murderer selection to all players');
+        console.log('Game state being sent:', this.gameCore.getGameState());
         this.connection.sendGameState(this.gameCore.getGameState());
       }
 
@@ -1464,8 +1474,13 @@ class GameController {
     this.startSimplifiedRoleReveal();
   }
 
-  // Handle game state updates
+    // Handle game state updates
   handleGameStateUpdate(gameState) {
+    console.log('Game state update received:', gameState);
+    console.log('Current local role:', this.localRole);
+    console.log('Selected clue card:', gameState.selectedClueCard);
+    console.log('Selected mean card:', gameState.selectedMeanCard);
+    
     // Update local game state
     this.gameCore.gameState = gameState;
     if (!this.localRole && this.localPlayerName) {
@@ -1475,16 +1490,21 @@ class GameController {
       this.localRole = me?.role || '';
     }
     this.updateGameUI();
-    
+ 
     // Check if murderer has made their selection and notify scientist
-    if (this.localRole === 'Forensic Scientist' && gameState.selectedClueCard && gameState.selectedMeanCard) {
+    if (
+      this.localRole === 'Forensic Scientist' &&
+      gameState.selectedClueCard &&
+      gameState.selectedMeanCard
+    ) {
+      console.log('Scientist detected murderer selection!');
       this.gameUI.showInfo(
         `The murderer selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
       );
       this.gameUI.showInfo(
         'Everyone can now open their eyes. You will now select scene tiles for investigation.'
       );
-      
+ 
       // Start clue phase for scientist
       setTimeout(() => {
         this.startCluePhaseUI();
