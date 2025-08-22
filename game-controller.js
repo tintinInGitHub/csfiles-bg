@@ -418,6 +418,11 @@ class GameController {
         console.log('Broadcasting murderer selection to all players');
         console.log('Game state being sent:', this.gameCore.getGameState());
         this.connection.sendGameState(this.gameCore.getGameState());
+        
+        // Also process the update locally for the host
+        setTimeout(() => {
+          this.handleGameStateUpdate(this.gameCore.getGameState());
+        }, 100);
       }
 
       // Notify scientist about the selection
@@ -868,7 +873,9 @@ class GameController {
   // Show persistent murderer selection display for scientist
   showPersistentMurdererSelection() {
     // Remove existing murderer selection display if any
-    const existingDisplay = document.getElementById('persistentMurdererSelectionDisplay');
+    const existingDisplay = document.getElementById(
+      'persistentMurdererSelectionDisplay'
+    );
     if (existingDisplay) {
       existingDisplay.remove();
     }
@@ -918,7 +925,8 @@ class GameController {
     const toggleButton = GameUtils.createElement('button', {
       textContent: '👁️ Hide Selection',
       className: 'btn-secondary',
-      style: 'font-size: 12px; padding: 5px 10px; background: #ff0000; color: white;',
+      style:
+        'font-size: 12px; padding: 5px 10px; background: #ff0000; color: white;',
     });
 
     let isHidden = false;
@@ -1563,6 +1571,7 @@ class GameController {
   handleGameStateUpdate(gameState) {
     console.log('Game state update received:', gameState);
     console.log('Current local role:', this.localRole);
+    console.log('Is host:', this.isHost);
     console.log('Selected clue card:', gameState.selectedClueCard);
     console.log('Selected mean card:', gameState.selectedMeanCard);
 
@@ -1576,31 +1585,31 @@ class GameController {
     }
     this.updateGameUI();
 
-        // Check if murderer has made their selection and notify scientist
+    // Check if murderer has made their selection and notify scientist
     if (
       this.localRole === 'Forensic Scientist' &&
       gameState.selectedClueCard &&
       gameState.selectedMeanCard
     ) {
       console.log('Scientist detected murderer selection!');
- 
+
       // Find the murderer's name
       const murderer = gameState.players.find((p) => p.role === 'Murderer');
       const murdererName = murderer ? murderer.name : 'Unknown';
- 
+
       // Show prominent notification to scientist
       this.gameUI.showWarning(
         `🔍 MURDERER SELECTION: ${murdererName} chose ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
       );
- 
+
       // Show persistent murderer selection display
       this.showPersistentMurdererSelection();
- 
+
       setTimeout(() => {
         this.gameUI.showInfo(
           'Everyone can now open their eyes. You will now select scene tiles for investigation.'
         );
- 
+
         // Start clue phase for scientist
         setTimeout(() => {
           this.startCluePhaseUI();
