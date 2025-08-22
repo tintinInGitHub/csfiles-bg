@@ -426,8 +426,13 @@ class GameController {
       // Broadcast murderer selection to all players
       if (this.isHost && this.connection) {
         console.log('Broadcasting murderer selection to all players');
-        console.log('Game state being sent:', this.gameCore.getGameState());
-        this.connection.sendGameState(this.gameCore.getGameState());
+        const gameStateToSend = this.gameCore.getGameState();
+        console.log('Game state being sent:', gameStateToSend);
+        console.log('Selected cards in game state:', {
+          clueCard: gameStateToSend.selectedClueCard,
+          meanCard: gameStateToSend.selectedMeanCard
+        });
+        this.connection.sendGameState(gameStateToSend);
 
         // Also process the update locally for the host
         setTimeout(() => {
@@ -1600,6 +1605,13 @@ class GameController {
 
     // Check if murderer has made their selection and notify scientist
     // Only check if we have actual selections (not null/empty)
+    console.log('Checking for scientist notification...');
+    console.log('Local role:', this.localRole);
+    console.log('Selected clue card:', gameState.selectedClueCard);
+    console.log('Selected mean card:', gameState.selectedMeanCard);
+    console.log('Clue card type:', typeof gameState.selectedClueCard);
+    console.log('Mean card type:', typeof gameState.selectedMeanCard);
+    
     if (
       this.localRole === 'Forensic Scientist' &&
       gameState.selectedClueCard &&
@@ -1611,7 +1623,7 @@ class GameController {
       console.log('Is host scientist:', this.isHost);
       console.log('Game state selections:', {
         clueCard: gameState.selectedClueCard,
-        meanCard: gameState.selectedMeanCard
+        meanCard: gameState.selectedMeanCard,
       });
 
       // Find the murderer's name
