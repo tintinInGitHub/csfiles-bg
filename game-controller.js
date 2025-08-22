@@ -20,15 +20,17 @@ class GameController {
   // Load and display version info
   loadVersion() {
     fetch('./version.json')
-      .then(response => response.json())
-      .then(data => {
+      .then((response) => response.json())
+      .then((data) => {
         const versionElement = document.getElementById('versionInfo');
         if (versionElement) {
           versionElement.textContent = `v${data.version} (${data.lastCommit})`;
-          versionElement.title = `Build: ${data.build}\nDeploy: ${new Date(data.lastDeploy).toLocaleString()}`;
+          versionElement.title = `Build: ${data.build}\nDeploy: ${new Date(
+            data.lastDeploy
+          ).toLocaleString()}`;
         }
       })
-      .catch(error => {
+      .catch((error) => {
         console.log('Could not load version info:', error);
       });
   }
@@ -135,14 +137,14 @@ class GameController {
   startNightPhase() {
     const nightInfo = this.gameCore.startNightPhase();
     this.gameUI.showModal('nightPhaseModal');
-    
+
     // Debug: log current role assignment
     console.log('Night phase started. Local role:', this.localRole);
     console.log('Local player name:', this.localPlayerName);
     console.log('Current player ID:', this.currentPlayer);
-    
+
     this.updateNightPhaseUI(nightInfo);
-    
+
     // Start the night phase sequence
     this.startNightPhaseSequence();
   }
@@ -152,25 +154,33 @@ class GameController {
     // Debug: log current role assignment
     console.log('Night phase sequence started. Local role:', this.localRole);
     console.log('Local player name:', this.localPlayerName);
-    
+
     // Step 1: Everyone close eyes
     this.gameUI.showInfo('Everyone close your eyes...');
-    
+
     setTimeout(() => {
       // Step 2: Scientist open eyes
       if (this.localRole === 'Forensic Scientist') {
-        this.gameUI.showInfo('Forensic Scientist, open your eyes. You will see what the murderer chooses.');
+        this.gameUI.showInfo(
+          'Forensic Scientist, open your eyes. You will see what the murderer chooses.'
+        );
       }
-      
+
       setTimeout(() => {
         // Step 3: Murderer open eyes and select cards
         if (this.localRole === 'Murderer') {
-          this.gameUI.showInfo('Murderer, open your eyes. Select your crime evidence.');
+          this.gameUI.showInfo(
+            'Murderer, open your eyes. Select your crime evidence.'
+          );
           this.showMurdererCardSelection();
         } else if (this.localRole === 'Forensic Scientist') {
-          this.gameUI.showInfo('Murderer is selecting their cards. Watch carefully...');
+          this.gameUI.showInfo(
+            'Murderer is selecting their cards. Watch carefully...'
+          );
         } else {
-          this.gameUI.showInfo('Murderer is selecting their cards. Keep your eyes closed.');
+          this.gameUI.showInfo(
+            'Murderer is selecting their cards. Keep your eyes closed.'
+          );
         }
       }, 3000); // Wait 3 seconds before murderer phase
     }, 2000); // Wait 2 seconds before scientist phase
@@ -184,20 +194,24 @@ class GameController {
     actions.classList.add('hidden');
     const nextBtn = document.getElementById('nextNightStepBtn');
     const isScientistLocal = this.localRole === 'Forensic Scientist';
-    
+
     // Make button more visible and clear
     nextBtn.disabled = !isScientistLocal;
     nextBtn.style.display = 'block';
     nextBtn.style.opacity = isScientistLocal ? '1' : '0.5';
-    
+
     if (isScientistLocal) {
       nextBtn.textContent = 'Next Step (You are the Scientist)';
-      this.gameUI.showInfo('You are the Forensic Scientist. You can click Next Step.');
+      this.gameUI.showInfo(
+        'You are the Forensic Scientist. You can click Next Step.'
+      );
     } else {
       nextBtn.textContent = 'Next Step (Scientist Only)';
-      this.gameUI.showInfo('Waiting for the Forensic Scientist to click Next Step...');
+      this.gameUI.showInfo(
+        'Waiting for the Forensic Scientist to click Next Step...'
+      );
     }
-    
+
     if (nightInfo.step === 'murderer_select' && nightInfo.showActions) {
       if (this.localRole === 'Murderer') {
         this.showMurdererCardSelection();
@@ -396,7 +410,9 @@ class GameController {
 
       // Notify scientist about the selection
       if (this.localRole === 'Murderer') {
-        this.gameUI.showInfo('Close your eyes. The scientist will now see your selection.');
+        this.gameUI.showInfo(
+          'Close your eyes. The scientist will now see your selection.'
+        );
       }
 
       // Continue night phase sequence
@@ -421,12 +437,18 @@ class GameController {
       // Notify scientist about murderer's selection
       if (this.localRole === 'Forensic Scientist') {
         const gameState = this.gameCore.getGameState();
-        this.gameUI.showInfo(`The murderer selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`);
-        this.gameUI.showInfo('Everyone can now open their eyes. You will now select scene tiles for investigation.');
+        this.gameUI.showInfo(
+          `The murderer selected: ${gameState.selectedClueCard} and ${gameState.selectedMeanCard}`
+        );
+        this.gameUI.showInfo(
+          'Everyone can now open their eyes. You will now select scene tiles for investigation.'
+        );
       } else if (this.localRole === 'Murderer') {
         this.gameUI.showInfo('Everyone can now open their eyes.');
       } else {
-        this.gameUI.showInfo('Everyone can now open their eyes. The scientist will select scene tiles.');
+        this.gameUI.showInfo(
+          'Everyone can now open their eyes. The scientist will select scene tiles.'
+        );
       }
 
       setTimeout(() => {
@@ -633,20 +655,33 @@ class GameController {
     this.startSimplifiedRoleReveal();
   }
 
+    // Assign local role for current player
+  assignLocalRole() {
+    const players = this.gameCore.getGameState().players;
+    const currentPlayer = players.find((p) => p.name === this.localPlayerName);
+    if (currentPlayer) {
+      this.localRole = currentPlayer.role;
+      console.log('Local role assigned in assignLocalRole:', this.localRole);
+    }
+  }
+
   // Simplified role reveal sequence
   startSimplifiedRoleReveal() {
+    // First, assign local role
+    this.assignLocalRole();
+    
     // First, announce the Forensic Scientist
     const forensicInfo = this.gameCore.revealForensicScientist();
     if (forensicInfo) {
       this.gameUI.showInfo(forensicInfo.message);
       this.updateGameUI();
-      
+ 
       // If host, send scientist reveal to all players
       if (this.isHost && this.connection) {
         this.connection.sendScientistReveal(forensicInfo);
       }
     }
-    
+ 
     // Then reveal each player's role individually
     this.revealPlayerRolesSequentially();
   }
@@ -655,45 +690,49 @@ class GameController {
   revealPlayerRolesSequentially() {
     const players = this.gameCore.getGameState().players;
     let currentIndex = 0;
-    
+
     // First, assign local role for current player
-    const currentPlayer = players.find(p => p.name === this.localPlayerName);
+    const currentPlayer = players.find((p) => p.name === this.localPlayerName);
     if (currentPlayer) {
       this.localRole = currentPlayer.role;
       console.log('Local role assigned:', this.localRole);
     }
-    
+
     const showNextRole = () => {
       if (currentIndex >= players.length) {
         // All roles revealed, start night phase
         this.startNightPhase();
         return;
       }
-      
+
       const player = players[currentIndex];
       const isCurrentPlayer = player.name === this.localPlayerName;
-      
+
       if (isCurrentPlayer) {
         // Show role to current player
         this.gameUI.showInfo(`You are the ${player.role}!`);
-        
+
         // Special message for murderer
         if (player.role === 'Murderer') {
-          this.gameUI.showInfo('You are the Murderer. Stay hidden and choose wisely.');
+          this.gameUI.showInfo(
+            'You are the Murderer. Stay hidden and choose wisely.'
+          );
         }
-        
+
         // Special message for scientist
         if (player.role === 'Forensic Scientist') {
-          this.gameUI.showInfo('You are the Forensic Scientist. You will guide the investigation.');
+          this.gameUI.showInfo(
+            'You are the Forensic Scientist. You will guide the investigation.'
+          );
         }
       }
-      
+
       currentIndex++;
-      
+
       // Wait 2 seconds before showing next role
       setTimeout(showNextRole, 2000);
     };
-    
+
     // Start the sequence
     showNextRole();
   }
@@ -778,7 +817,10 @@ class GameController {
 
     this.gameUI.populateDropdown(
       'guessPlayerSelect',
-      activePlayers.map((p) => ({ value: p.id, text: p.name || `Player ${p.id}` }))
+      activePlayers.map((p) => ({
+        value: p.id,
+        text: p.name || `Player ${p.id}`,
+      }))
     );
     this.gameUI.populateDropdown(
       'guessClueSelect',
@@ -1202,7 +1244,7 @@ class GameController {
       this.gameUI.showWarning('A player left the room');
     });
 
-    this.connection.on('onGameStarted', (gameState) => {
+        this.connection.on('onGameStarted', (gameState) => {
       // Handle game start from host
       this.gameCore.gameState = gameState;
       this.gameUI.closeModal('waitingRoomModal');
@@ -1217,24 +1259,29 @@ class GameController {
       
       console.log('Game started. Local role assigned:', this.localRole);
       console.log('Local player name:', this.localPlayerName);
-      console.log('Available players:', this.gameCore.getGameState().players.map(p => ({ name: p.name, role: p.role })));
+      console.log(
+        'Available players:',
+        this.gameCore
+          .getGameState()
+          .players.map((p) => ({ name: p.name, role: p.role }))
+      );
       
       // Only host shows roles distribution
       if (this.isHost) {
         this.showRolesDistributionModal();
+      } else {
+        // Non-host players should also get their roles assigned immediately
+        this.assignLocalRole();
       }
     });
 
-    this.connection.on('onRoleDistribution', (gameState) => {
+        this.connection.on('onRoleDistribution', (gameState) => {
       // Handle role distribution from host
       this.gameCore.gameState = gameState;
       this.updateGameUI();
       
-      // Store local role for quick checks
-      const me = this.gameCore
-        .getGameState()
-        .players.find((p) => p.name === this.localPlayerName);
-      this.localRole = me?.role || '';
+      // Assign local role for current player
+      this.assignLocalRole();
       
       console.log('Role distribution received. Local role:', this.localRole);
       
@@ -1242,10 +1289,13 @@ class GameController {
       this.startSimplifiedRoleReveal();
     });
 
-    this.connection.on('onScientistReveal', (forensicInfo) => {
+        this.connection.on('onScientistReveal', (forensicInfo) => {
       // Handle scientist reveal from host
       console.log('Scientist reveal received:', forensicInfo);
-      
+ 
+      // Assign local role for current player
+      this.assignLocalRole();
+ 
       // Show scientist info and start role reveal sequence
       this.gameUI.showInfo(forensicInfo.message);
       this.updateGameUI();
@@ -1289,7 +1339,7 @@ class GameController {
     this.gameCore.startGame(playerCount);
 
     // Set player names from waiting room
-    this.gameCore.setPlayerNames(this.waitingRoomPlayers.map(p => p.name));
+    this.gameCore.setPlayerNames(this.waitingRoomPlayers.map((p) => p.name));
 
     // Send game start to other players
     this.connection.startGame(this.gameCore.getGameState());
