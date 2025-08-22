@@ -144,9 +144,6 @@ class GameController {
     console.log('Current player ID:', this.currentPlayer);
 
     this.updateNightPhaseUI(nightInfo);
-
-    // Start the night phase sequence
-    this.startNightPhaseSequence();
   }
 
   // Night phase sequence: everyone close eyes -> scientist awake -> murderer awake -> card selection
@@ -443,13 +440,15 @@ class GameController {
         this.gameUI.showInfo(
           'Everyone can now open their eyes. You will now select scene tiles for investigation.'
         );
-        
+
         // Start clue phase for scientist
         setTimeout(() => {
           this.startCluePhaseUI();
         }, 2000);
       } else if (this.localRole === 'Murderer') {
-        this.gameUI.showInfo('Everyone can now open their eyes. Wait for the scientist to select tiles.');
+        this.gameUI.showInfo(
+          'Everyone can now open their eyes. Wait for the scientist to select tiles.'
+        );
       } else {
         this.gameUI.showInfo(
           'Everyone can now open their eyes. The scientist will select scene tiles, then discussion phase will begin.'
@@ -599,10 +598,16 @@ class GameController {
         } else if (next.phase === 'discussion') {
           this.startDiscussionTimer(next.durationSec, next.endsAt);
           this.gameUI.showInfo('Discussion phase started');
-          
+
           // Notify investigators that discussion phase has begun
-          if (this.localRole === 'Investigator' || this.localRole === 'Accomplice' || this.localRole === 'Witness') {
-            this.gameUI.showInfo('Discussion phase has begun! You can now discuss and make guesses.');
+          if (
+            this.localRole === 'Investigator' ||
+            this.localRole === 'Accomplice' ||
+            this.localRole === 'Witness'
+          ) {
+            this.gameUI.showInfo(
+              'Discussion phase has begun! You can now discuss and make guesses.'
+            );
           }
         }
       } else {
@@ -628,7 +633,7 @@ class GameController {
     const nightInfo = this.gameCore.nextNightStep();
     if (!nightInfo) {
       this.gameUI.closeModal('nightPhaseModal');
-      this.startCluePhaseUI();
+      // Don't start clue phase here - it will be started after murderer selection
       return;
     }
     this.updateNightPhaseUI(nightInfo);
@@ -733,40 +738,40 @@ class GameController {
     this.revealPlayerRolesSequentially();
   }
 
-    // Reveal each player's role one by one
+  // Reveal each player's role one by one
   revealPlayerRolesSequentially() {
     const players = this.gameCore.getGameState().players;
     let currentIndex = 0;
-    
+
     // First, assign local role for current player
     const currentPlayer = players.find((p) => p.name === this.localPlayerName);
     if (currentPlayer) {
       this.localRole = currentPlayer.role;
       console.log('Local role assigned:', this.localRole);
     }
-    
+
     const showNextRole = () => {
       if (currentIndex >= players.length) {
-        // All roles revealed, show persistent role display and start night phase
+        // All roles revealed, show persistent role display and start night phase sequence
         this.showPersistentRoleDisplay();
-        this.startNightPhase();
+        this.startNightPhaseSequence();
         return;
       }
-      
+
       const player = players[currentIndex];
       const isCurrentPlayer = player.name === this.localPlayerName;
-      
+
       if (isCurrentPlayer) {
         // Show role to current player
         this.gameUI.showInfo(`You are the ${player.role}!`);
-        
+
         // Special message for murderer
         if (player.role === 'Murderer') {
           this.gameUI.showInfo(
             'You are the Murderer. Stay hidden and choose wisely.'
           );
         }
-        
+
         // Special message for scientist
         if (player.role === 'Forensic Scientist') {
           this.gameUI.showInfo(
@@ -774,13 +779,13 @@ class GameController {
           );
         }
       }
-      
+
       currentIndex++;
-      
+
       // Wait 2 seconds before showing next role
       setTimeout(showNextRole, 2000);
     };
-    
+
     // Start the sequence
     showNextRole();
   }
@@ -808,18 +813,18 @@ class GameController {
         z-index: 1000;
         font-family: 'Courier New', monospace;
         min-width: 200px;
-      `
+      `,
     });
 
     const roleText = GameUtils.createElement('div', {
       textContent: `Your Role: ${this.localRole}`,
-      style: 'font-weight: bold; margin-bottom: 10px;'
+      style: 'font-weight: bold; margin-bottom: 10px;',
     });
 
     const toggleButton = GameUtils.createElement('button', {
       textContent: '👁️ Hide Role',
       className: 'btn-secondary',
-      style: 'font-size: 12px; padding: 5px 10px;'
+      style: 'font-size: 12px; padding: 5px 10px;',
     });
 
     let isHidden = false;
