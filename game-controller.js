@@ -657,7 +657,9 @@ class GameController {
 
   // Assign local role for current player
   assignLocalRole() {
+    console.log('assignLocalRole called. Local player name:', this.localPlayerName);
     const players = this.gameCore.getGameState().players;
+    console.log('Game state players:', players.map(p => ({ name: p.name, id: p.id, role: p.role })));
     
     // Try to find by name first
     let currentPlayer = players.find((p) => p.name === this.localPlayerName);
@@ -671,6 +673,7 @@ class GameController {
       // Try to find by connection player ID
       if (this.connection) {
         const connectionStatus = this.connection.getConnectionStatus();
+        console.log('Connection status:', connectionStatus);
         currentPlayer = players.find((p) => p.id === connectionStatus.playerId);
       }
     }
@@ -1105,7 +1108,7 @@ class GameController {
   async createRoom() {
     const playerName = document.getElementById('playerName').value.trim();
     this.localPlayerName = playerName;
-    this.localPlayerName = playerName;
+    console.log('Setting local player name in createRoom:', this.localPlayerName);
     const playerCount = parseInt(
       document.getElementById('multiplayerPlayerCount').value
     );
@@ -1139,6 +1142,8 @@ class GameController {
   // Join a multiplayer room
   async joinRoom() {
     const playerName = document.getElementById('playerName').value.trim();
+    this.localPlayerName = playerName;
+    console.log('Setting local player name in joinRoom:', this.localPlayerName);
     const roomCode = document
       .getElementById('roomCodeInput')
       .value.trim()
